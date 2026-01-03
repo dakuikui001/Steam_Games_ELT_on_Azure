@@ -1,0 +1,268 @@
+{
+	"name": "great_expectations_setting",
+	"properties": {
+		"nbformat": 4,
+		"nbformat_minor": 2,
+		"bigDataPool": {
+			"referenceName": "newpool",
+			"type": "BigDataPoolReference"
+		},
+		"sessionProperties": {
+			"driverMemory": "28g",
+			"driverCores": 4,
+			"executorMemory": "28g",
+			"executorCores": 4,
+			"numExecutors": 2,
+			"conf": {
+				"spark.dynamicAllocation.enabled": "false",
+				"spark.dynamicAllocation.minExecutors": "2",
+				"spark.dynamicAllocation.maxExecutors": "2",
+				"spark.autotune.trackingId": "01094e4d-d73e-4148-b7e4-277f025e7c8d"
+			}
+		},
+		"metadata": {
+			"saveOutput": true,
+			"enableDebugMode": false,
+			"kernelspec": {
+				"name": "synapse_pyspark",
+				"display_name": "Synapse PySpark"
+			},
+			"language_info": {
+				"name": "python"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/39078ff2-6324-4d09-88e5-575820da458d/resourceGroups/data_engineering/providers/Microsoft.Synapse/workspaces/steam-game-synapse/bigDataPools/newpool",
+				"name": "newpool",
+				"type": "Spark",
+				"endpoint": "https://steam-game-synapse.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/newpool",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net"
+				},
+				"sparkVersion": "3.5",
+				"nodeCount": 10,
+				"cores": 4,
+				"memory": 28,
+				"automaticScaleJobs": false
+			},
+			"sessionKeepAliveTimeout": 30
+		},
+		"cells": [
+			{
+				"cell_type": "code",
+				"source": [
+					"%pip install great_expectations==1.10.0"
+				],
+				"execution_count": 2
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"from great_expectations.core import ExpectationSuite\n",
+					"from notebookutils import mssparkutils\n",
+					"import great_expectations.expectations as gxe\n",
+					"from great_expectations.data_context import FileDataContext\n",
+					"from great_expectations.data_context.types.base import DataContextConfig\n",
+					"import os\n",
+					"import shutil"
+				],
+				"execution_count": 19
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"# 1. 基础路径配置\n",
+					"container_name = \"steam-game-project\"\n",
+					"account_name = \"dataprojectsforhuilu\"\n",
+					"gx_root_dir = f\"abfss://{container_name}@{account_name}.dfs.core.windows.net/gx_config/\"\n",
+					"\n",
+					"# --- 新增：彻底清空旧环境 ---\n",
+					"print(f\"正在清理旧的 GX 配置目录: {gx_root_dir}\")\n",
+					"try:\n",
+					"    # 递归删除整个 gx_config 文件夹及其内容\n",
+					"    mssparkutils.fs.rm(gx_root_dir, True) \n",
+					"    print(\"✅ 旧目录已彻底删除\")\n",
+					"except Exception as e:\n",
+					"    print(f\"ℹ️ 目录不存在或无需清理: {e}\")\n",
+					"\n",
+					"# 重新创建基础目录结构，防止后续写入报错\n",
+					"mssparkutils.fs.mkdirs(gx_root_dir)\n",
+					"mssparkutils.fs.mkdirs(gx_root_dir + \"expectations\")\n",
+					"# -----------------------\n",
+					"\n",
+					"# 2. 强制重写 yml\n",
+					"full_config = f\"\"\"\n",
+					"config_version: 3.0\n",
+					"expectations_store_name: expectations_store\n",
+					"stores:\n",
+					"  expectations_store:\n",
+					"    class_name: ExpectationsStore\n",
+					"    store_backend:\n",
+					"      class_name: TupleAzureBlobStoreBackend\n",
+					"      container: {container_name}\n",
+					"      prefix: gx_config/expectations\n",
+					"      account_name: {account_name}\n",
+					"\"\"\"\n",
+					"\n",
+					"mssparkutils.fs.put(gx_root_dir + \"great_expectations.yml\", full_config, True)\n",
+					"print(\"✅ 物理 yml 配置文件已重置\")\n",
+					"\n",
+					"# 3. 重新初始化 Context\n",
+					"context = gx.get_context(context_root_dir=gx_root_dir)\n",
+					"print(f\"🚀 GX Context 已重新加载，当前为全新环境。\")"
+				],
+				"execution_count": 20
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"# 定义表和对应的 Suite 名\n",
+					"tables_to_validate = [\n",
+					"    {\"table\": \"steam_game_bz\", \"suite\": \"steam_game_bz_suite\"}  \n",
+					"]\n",
+					"\n",
+					"for item in tables_to_validate:\n",
+					"    table_name = item[\"table\"]\n",
+					"    suite_name = item[\"suite\"]\n",
+					"    \n",
+					"    # 1.10+ 获取或创建 Suite 的标准写法\n",
+					"    try:\n",
+					"        # 使用 .suites.get 获取\n",
+					"        suite = context.suites.get(name=suite_name)\n",
+					"        print(f\"✅ 已加载现有 Suite: {suite_name}\")\n",
+					"    except Exception:\n",
+					"        # 使用 .suites.add 和 gx.ExpectationSuite 创建\n",
+					"        # 这会自动在 Files/gx_config/expectations/ 下生成对应的 .json 文件\n",
+					"        suite = context.suites.add(gx.ExpectationSuite(name=suite_name))\n",
+					"        print(f\"✨ 已成功新建并持久化 Suite: {suite_name}\")\n",
+					"\n",
+					"print(\"\\n所有 Suite 初始化完成。\")"
+				],
+				"execution_count": 21
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"table_rules_mapping = {\n",
+					"    \"steam_game_bz\": [\n",
+					"        # 1. 必填项检查\n",
+					"        gxe.ExpectColumnValuesToNotBeNull(column=\"appid\"),\n",
+					"        gxe.ExpectColumnValuesToBeBetween(\n",
+					"            column=\"release_year\", \n",
+					"            min_value=2021, \n",
+					"            max_value=2025\n",
+					"        ),\n",
+					"        gxe.ExpectColumnValuesToMatchStrftimeFormat(\n",
+					"            column=\"release_date\",\n",
+					"            strftime_format=\"%b %d, %Y\"\n",
+					"        ),\n",
+					"        gxe.ExpectColumnValuesToMatchRegex(\n",
+					"        column=\"developer\",\n",
+					"        regex=r\"^[^;]+(;[^;]+)*$\",\n",
+					"        mostly=1.0 \n",
+					"        ),\n",
+					"        gxe.ExpectColumnValuesToMatchRegex(\n",
+					"        column=\"publisher\",\n",
+					"        regex=r\"^[^;]+(;[^;]+)*$\",\n",
+					"        mostly=1.0 \n",
+					"        )\n",
+					"    ]\n",
+					"}"
+				],
+				"execution_count": 25
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"def initialize_all_suites(context, rules_mapping):\n",
+					"    import json\n",
+					"    from copy import deepcopy # 导入拷贝工具\n",
+					"    \n",
+					"    for table_name, expectations in rules_mapping.items():\n",
+					"        suite_name = f\"{table_name}_suite\"\n",
+					"        \n",
+					"        # 1. 获取或创建 Suite\n",
+					"        try:\n",
+					"            suite = context.suites.get(name=suite_name)\n",
+					"            # 注意：在 GX 1.0 中，清空 expectations 列表可能不会清除后端关联\n",
+					"            # 建议直接重新赋值一个空列表\n",
+					"            suite.expectations = [] \n",
+					"            print(f\"🔄 正在重置内存中的 Suite: {suite_name}\")\n",
+					"        except Exception:\n",
+					"            suite = context.suites.add(gx.ExpectationSuite(name=suite_name))\n",
+					"            print(f\"✨ 正在创建新的 Suite: {suite_name}\")\n",
+					"\n",
+					"        # 2. 批量添加规则\n",
+					"        for exp in expectations:\n",
+					"            try:\n",
+					"                # --- 关键修复代码 ---\n",
+					"                # 方案 A: 强行抹掉 ID (最直接)\n",
+					"                exp.id = None \n",
+					"                \n",
+					"                # 方案 B: 如果 A 不行，使用 deepcopy 彻底断开引用\n",
+					"                # clean_exp = deepcopy(exp)\n",
+					"                # clean_exp.id = None\n",
+					"                # suite.add_expectation(clean_exp)\n",
+					"                \n",
+					"                suite.add_expectation(exp)\n",
+					"            except Exception as e:\n",
+					"                # 如果是因为重复添加导致的错误，打印出来但继续运行\n",
+					"                print(f\"⚠️ 跳过重复规则或错误: {str(e)}\")\n",
+					"        \n",
+					"        # 3. 物理强制写入 (保持不变...)\n",
+					"        try:\n",
+					"            suite_dict = suite.to_json_dict()\n",
+					"            physical_path = f\"{gx_root_dir}expectations/{suite_name}.json\"\n",
+					"            mssparkutils.fs.put(physical_path, json.dumps(suite_dict, indent=2), True)\n",
+					"            print(f\"✅ 物理同步成功: {suite_name}.json\")\n",
+					"        except Exception as e:\n",
+					"            print(f\"❌ 物理写入失败 {suite_name}: {e}\")"
+				],
+				"execution_count": 30
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"initialize_all_suites(context, table_rules_mapping)"
+				],
+				"execution_count": 31
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"try:\n",
+					"    files = mssparkutils.fs.ls(gx_root_dir + \"expectations\")\n",
+					"    print(f\"🚀 物理扫描结果: 发现 {len(files)} 个文件\")\n",
+					"    for f in files:\n",
+					"        print(f\"文件路径: {f.path}\")\n",
+					"except:\n",
+					"    print(\"❌ 文件夹依然为空或未生成。\")"
+				],
+				"execution_count": 32
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\n",
+					"DROP TABLE IF EXISTS data_quality_quarantine;\n",
+					"\n",
+					"CREATE TABLE IF NOT EXISTS data_quality_quarantine (\n",
+					"    table_name STRING,\n",
+					"    batch_id LONG,\n",
+					"    violated_rules STRING,\n",
+					"    raw_data STRING,\n",
+					"    ingestion_time TIMESTAMP\n",
+					") USING DELTA\n",
+					"LOCATION 'abfss://steam-game-project@dataprojectsforhuilu.dfs.core.windows.net/gx_config/data_quality/';"
+				],
+				"execution_count": 33
+			}
+		]
+	}
+}

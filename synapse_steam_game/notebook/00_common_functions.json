@@ -1,0 +1,181 @@
+{
+	"name": "00_common_functions",
+	"properties": {
+		"nbformat": 4,
+		"nbformat_minor": 2,
+		"bigDataPool": {
+			"referenceName": "newpool",
+			"type": "BigDataPoolReference"
+		},
+		"sessionProperties": {
+			"driverMemory": "28g",
+			"driverCores": 4,
+			"executorMemory": "28g",
+			"executorCores": 4,
+			"numExecutors": 2,
+			"runAsWorkspaceSystemIdentity": false,
+			"conf": {
+				"spark.dynamicAllocation.enabled": "false",
+				"spark.dynamicAllocation.minExecutors": "2",
+				"spark.dynamicAllocation.maxExecutors": "2",
+				"spark.autotune.trackingId": "d4f4d46b-3e60-4656-a398-ecd2ea734ddb"
+			}
+		},
+		"metadata": {
+			"saveOutput": true,
+			"enableDebugMode": false,
+			"kernelspec": {
+				"name": "synapse_pyspark",
+				"display_name": "python"
+			},
+			"language_info": {
+				"name": "python"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/39078ff2-6324-4d09-88e5-575820da458d/resourceGroups/data_engineering/providers/Microsoft.Synapse/workspaces/steam-game-synapse/bigDataPools/newpool",
+				"name": "newpool",
+				"type": "Spark",
+				"endpoint": "https://steam-game-synapse.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/newpool",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net"
+				},
+				"sparkVersion": "3.5",
+				"nodeCount": 10,
+				"cores": 4,
+				"memory": 28,
+				"automaticScaleJobs": false
+			},
+			"sessionKeepAliveTimeout": 30
+		},
+		"cells": [
+			{
+				"cell_type": "code",
+				"source": [
+					"import pandas as pd\n",
+					"from pyspark.sql.functions import pandas_udf, col\n",
+					"from pyspark.sql.types import DateType\n",
+					"from datetime import datetime\n",
+					"from delta.tables import DeltaTable"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"def check_duplicates(df):    \n",
+					"    print('Checking for duplicates ',end='')\n",
+					"    cleaned_df = df.dropDuplicates()\n",
+					"    print('OK')\n",
+					"    return df\n",
+					"\n",
+					"def check_all_null(df):\n",
+					"    print('Checking for all-null rows ', end='')\n",
+					"    cleaned_df = df.dropna(how='all')\n",
+					"    print('OK')\n",
+					"    return cleaned_df\n",
+					"\n",
+					"def check_null(df, columns):\n",
+					"    print('Checking for nulls on string columns ',end = '')\n",
+					"    processed_df1 = df.fillna('Unknown', subset = columns)\n",
+					"    print('OK')\n",
+					"    print('Checking for nulls on numeric columns ',end = '')\n",
+					"    processed_df2  = processed_df1.fillna(0, subset = columns)\n",
+					"    print('OK')\n",
+					"    return processed_df2\n",
+					""
+				],
+				"execution_count": 2
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"def parse_steam_date(date_str):\n",
+					"    if date_str is None:\n",
+					"        return None\n",
+					"    \n",
+					"    date_str = str(date_str).strip()\n",
+					"\n",
+					"    if not date_str or date_str.lower() == 'none':\n",
+					"        return None\n",
+					"\n",
+					"    date_str = date_str.strip()\n",
+					"    if not date_str:\n",
+					"        return None\n",
+					"    \n",
+					"    # %b %d, %Y -> Jul 5, 2024\n",
+					"    # %b %d, %y -> Jul 5, 24\n",
+					"    for fmt in (\"%b %d, %Y\", \"%b %d, %y\"):\n",
+					"        try:\n",
+					"            return datetime.strptime(date_str, fmt)\n",
+					"        except ValueError:\n",
+					"            continue\n",
+					"\n",
+					"    # %B %Y -> December 2025\n",
+					"    # %b %Y -> Dec 2025\n",
+					"    for fmt in (\"%B %Y\", \"%b %Y\"):\n",
+					"        try:\n",
+					"            return datetime.strptime(date_str, fmt)\n",
+					"        except ValueError:\n",
+					"            continue\n",
+					"\n",
+					"    # \"Q4 2025\"\n",
+					"    if 'Q' in date_str and len(date_str) >= 7:\n",
+					"        try:\n",
+					"            quarter = date_str[1] \n",
+					"            year = date_str[-4:]  \n",
+					"            month = (int(quarter) - 1) * 3 + 1\n",
+					"            return datetime(int(year), month, 1)\n",
+					"        except:\n",
+					"            pass\n",
+					"\n",
+					"    # \"2025\"\n",
+					"    if date_str.isdigit() and len(date_str) == 4:\n",
+					"        return datetime(int(date_str), 1, 1)\n",
+					"\n",
+					"    return None\n",
+					"\n",
+					"@pandas_udf(DateType())\n",
+					"def parse_date_batch(s: pd.Series) -> pd.Series:\n",
+					"    return s.apply(lambda x: parse_steam_date(x))"
+				],
+				"execution_count": 10
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"def preprocessing(df):\n",
+					"    parsed_date_df = df.withColumn(\"release_date\", parse_date_batch(col(\"release_date\")))\n",
+					"    df1 = check_duplicates(parsed_date_df)\n",
+					"    df2 = check_all_null(df1)\n",
+					"    df3 = check_null(df2, df2.schema.names)\n",
+					"    return df3"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"from pyspark.sql import functions as F\n",
+					"\n",
+					"def exploding(df, col_name):\n",
+					"    if col_name == \"categories\":\n",
+					"        alias_name = \"category\"\n",
+					"    elif col_name == \"genres\":\n",
+					"        alias_name = \"genre\"\n",
+					"    else:\n",
+					"        alias_name = col_name\n",
+					"    \n",
+					"    exploded_df = df.select(\n",
+					"        \"appid\",\n",
+					"        F.explode(F.split(F.col(col_name), \";\")).alias(alias_name),\n",
+					"        \"update_time\" \n",
+					"    ).filter(F.col(alias_name) != \"\")\n",
+					"    \n",
+					"    return exploded_df"
+				],
+				"execution_count": null
+			}
+		]
+	}
+}

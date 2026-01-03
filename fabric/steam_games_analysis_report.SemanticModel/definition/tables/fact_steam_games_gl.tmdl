@@ -1,0 +1,86 @@
+table fact_steam_games_gl
+	lineageTag: f9fdc8b1-48c6-48ac-b45c-76f144383ef2
+
+	column appid
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 230ae47e-9c6b-4376-ab76-0bd179c96a80
+		summarizeBy: none
+		sourceColumn: appid
+
+		annotation SummarizationSetBy = Automatic
+
+	column name
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 7bbe46fe-d04c-4b3e-8b5c-ecfc52f3203b
+		summarizeBy: none
+		sourceColumn: name
+
+		annotation SummarizationSetBy = Automatic
+
+	column release_year
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 26bc58c2-e0e9-45dc-acd6-b3e6fcc94bc2
+		summarizeBy: sum
+		sourceColumn: release_year
+
+		annotation SummarizationSetBy = Automatic
+
+	column release_date
+		dataType: dateTime
+		formatString: Long Date
+		sourceProviderType: date
+		lineageTag: a6987de9-d64f-426e-8662-ef6b128a85f6
+		summarizeBy: none
+		sourceColumn: release_date
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column price
+		dataType: double
+		sourceProviderType: float
+		lineageTag: 9a7c448b-3b21-4750-a82f-51ff508437b8
+		summarizeBy: sum
+		sourceColumn: price
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column recommendations
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 1587bbf7-aa48-4a15-a0c1-8071efb0431e
+		summarizeBy: sum
+		sourceColumn: recommendations
+
+		annotation SummarizationSetBy = Automatic
+
+	column update_time
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: 11534487-2c59-4bb9-99c5-159121b379e6
+		summarizeBy: none
+		sourceColumn: update_time
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fact_steam_games_gl = m
+		mode: directQuery
+		source =
+				let
+				    Source = Sql.Database("synapsefabric-ondemand.sql.azuresynapse.net", "steamdb"),
+				    dbo_fact_steam_games_gl = Source{[Schema="dbo",Item="fact_steam_games_gl"]}[Data]
+				in
+				    dbo_fact_steam_games_gl
+
+	annotation PBI_ResultType = Table
+

@@ -1,0 +1,140 @@
+{
+	"name": "05_run_job",
+	"properties": {
+		"nbformat": 4,
+		"nbformat_minor": 2,
+		"bigDataPool": {
+			"referenceName": "newpool",
+			"type": "BigDataPoolReference"
+		},
+		"sessionProperties": {
+			"driverMemory": "28g",
+			"driverCores": 4,
+			"executorMemory": "28g",
+			"executorCores": 4,
+			"numExecutors": 2,
+			"runAsWorkspaceSystemIdentity": false,
+			"conf": {
+				"spark.dynamicAllocation.enabled": "false",
+				"spark.dynamicAllocation.minExecutors": "2",
+				"spark.dynamicAllocation.maxExecutors": "2",
+				"spark.autotune.trackingId": "c2cd90fd-5b20-47d0-a916-9965ecabf78c"
+			}
+		},
+		"metadata": {
+			"saveOutput": true,
+			"enableDebugMode": false,
+			"kernelspec": {
+				"name": "synapse_pyspark",
+				"display_name": "Synapse PySpark"
+			},
+			"language_info": {
+				"name": "python"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/39078ff2-6324-4d09-88e5-575820da458d/resourceGroups/data_engineering/providers/Microsoft.Synapse/workspaces/steam-game-synapse/bigDataPools/newpool",
+				"name": "newpool",
+				"type": "Spark",
+				"endpoint": "https://steam-game-synapse.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/newpool",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net"
+				},
+				"sparkVersion": "3.5",
+				"nodeCount": 10,
+				"cores": 4,
+				"memory": 28,
+				"automaticScaleJobs": false
+			},
+			"sessionKeepAliveTimeout": 30
+		},
+		"cells": [
+			{
+				"cell_type": "code",
+				"source": [
+					"# 1. 先安装关键的基础依赖\n",
+					"!pip install \"typing_extensions>=4.10.0\"\n",
+					"\n",
+					"# 2. 安装 Great Expectations 及其它依赖\n",
+					"!pip install \"great_expectations==1.10.0\"\n",
+					"\n",
+					"# 3. 修复你之前日志里提到的 sympy 冲突（torch 需要 1.13.1）\n",
+					"!pip install \"sympy==1.13.1\""
+				],
+				"execution_count": 1
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"%run \"great_expectations_processing\""
+				],
+				"execution_count": 2
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"tags": [
+						"parameters"
+					]
+				},
+				"source": [
+					"Once = True\n",
+					"ProcessingTime = '5 seconds'"
+				],
+				"execution_count": 3
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"spark.sql(\"USE steamdb\")"
+				],
+				"execution_count": 4
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"%run \"02_bronze\""
+				],
+				"execution_count": 5
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"bronze = Bronze()\n",
+					"bronze.consume(Once, ProcessingTime)"
+				],
+				"execution_count": 6
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"%run \"03_silver\""
+				],
+				"execution_count": 7
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"silver = Silver()\n",
+					"silver.upsert(Once, ProcessingTime)"
+				],
+				"execution_count": 8
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"%run \"04_gold\""
+				],
+				"execution_count": 9
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"gold = Gold()\n",
+					"gold.upsert(Once, ProcessingTime)"
+				],
+				"execution_count": 10
+			}
+		]
+	}
+}

@@ -1,0 +1,43 @@
+table dim_developers_gl
+	lineageTag: f9968389-5683-4050-860e-f62d9842e259
+
+	column appid
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 6df12550-b6c9-4eeb-9606-74ec93236d1e
+		summarizeBy: none
+		sourceColumn: appid
+
+		annotation SummarizationSetBy = Automatic
+
+	column developer
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: edd881bf-c277-4c54-b38a-473784f68b09
+		summarizeBy: none
+		sourceColumn: developer
+
+		annotation SummarizationSetBy = Automatic
+
+	column update_time
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: 57fac685-fcec-4050-886a-5848e5924dd9
+		summarizeBy: none
+		sourceColumn: update_time
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_developers_gl = m
+		mode: directQuery
+		source =
+				let
+				    Source = Sql.Database("synapsefabric-ondemand.sql.azuresynapse.net", "steamdb"),
+				    dbo_dim_developers_gl = Source{[Schema="dbo",Item="dim_developers_gl"]}[Data]
+				in
+				    dbo_dim_developers_gl
+
+	annotation PBI_ResultType = Table
+

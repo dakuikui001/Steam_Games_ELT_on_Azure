@@ -1,0 +1,48 @@
+table 'metrics selection'
+	lineageTag: 2d8179d1-a1bb-40ed-906f-7867826a5552
+
+	column 'metrics selection'
+		lineageTag: ca69b90b-eff8-4daa-9c01-6e3eb05f0461
+		summarizeBy: none
+		sourceColumn: [Value1]
+		sortByColumn: 'metrics selection Order'
+
+		relatedColumnDetails
+			groupByColumn: 'metrics selection Fields'
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'metrics selection Fields'
+		lineageTag: 748324be-092f-416e-af90-90d6848e31a1
+		summarizeBy: none
+		sourceColumn: [Value2]
+		sortByColumn: 'metrics selection Order'
+
+		extendedProperty ParameterMetadata =
+				{
+				  "version": 3,
+				  "kind": 2
+				}
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'metrics selection Order'
+		formatString: 0
+		lineageTag: 6a672fc4-0cca-4e9b-9465-2d9b0193e9ea
+		summarizeBy: sum
+		sourceColumn: [Value3]
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'metrics selection' = calculated
+		mode: import
+		source =
+				{
+				    ("AVG Recommendations", NAMEOF('Measure Table'[AVG Recommendations]), 0),
+				    ("AVG Price", NAMEOF('Measure Table'[AVG Price]), 1),
+				    ("Free Games", NAMEOF('Measure Table'[Free Games]), 2),
+				    ("Total Games", NAMEOF('Measure Table'[Total Games]), 3)
+				}
+
+	annotation PBI_Id = ca1d2a20f91d4a539b6150ee53f76df3
+

@@ -1,0 +1,44 @@
+relationship b95092d5-6d00-47b9-ab50-5ae169f889fc
+	joinOnDateBehavior: datePartOnly
+	fromColumn: Date_Table.Date
+	toColumn: LocalDateTable_77b54161-2441-49a5-bee2-24c4a1274fed.Date
+
+relationship d3190262-1090-4439-b7f9-ca42c0945bc6
+	joinOnDateBehavior: datePartOnly
+	fromColumn: Date_Table.StartOfYear
+	toColumn: LocalDateTable_ede357a5-4c7e-41e9-9ad2-771e38857cc5.Date
+
+relationship ed4a216e-375a-494c-9320-0569896cceda
+	joinOnDateBehavior: datePartOnly
+	fromColumn: Date_Table.StartOfMonth
+	toColumn: LocalDateTable_f362b2fa-1ffc-4d5e-8e90-c674313dba51.Date
+
+relationship 7f471830-4bbd-43e1-a096-b8997dc5a7ba
+	joinOnDateBehavior: datePartOnly
+	fromColumn: Date_Table.StartOfWeek
+	toColumn: LocalDateTable_3541513a-31ab-4975-b1d9-f9992583af7a.Date
+
+relationship 190c5d0a-6466-fd07-0a49-f238fe2f5c1b
+	crossFilteringBehavior: bothDirections
+	fromColumn: dim_categories_gl.appid
+	toColumn: fact_steam_games_gl.appid
+
+relationship b717f022-14c6-5d50-3177-edcf87712596
+	crossFilteringBehavior: bothDirections
+	fromColumn: dim_developers_gl.appid
+	toColumn: fact_steam_games_gl.appid
+
+relationship 9262b46d-e731-34bf-5fed-20f9f18fb8f3
+	crossFilteringBehavior: bothDirections
+	fromColumn: dim_genres_gl.appid
+	toColumn: fact_steam_games_gl.appid
+
+relationship f443abc2-a595-55d5-483e-4bf0f81012f0
+	crossFilteringBehavior: bothDirections
+	fromColumn: dim_publishers_gl.appid
+	toColumn: fact_steam_games_gl.appid
+
+relationship df067829-3c62-ddb3-f524-0b2704cb68f7
+	fromColumn: fact_steam_games_gl.release_date
+	toColumn: Date_Table.Date
+

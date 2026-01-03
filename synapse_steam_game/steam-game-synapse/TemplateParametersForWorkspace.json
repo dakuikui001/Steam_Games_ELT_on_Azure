@@ -1,0 +1,18 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"workspaceName": {
+			"value": "steam-game-synapse"
+		},
+		"steam-game-synapse-WorkspaceDefaultSqlServer_connectionString": {
+			"value": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:steam-game-synapse.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
+		},
+		"synapsefabric-WorkspaceDefaultSqlServer_connectionString": {
+			"value": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:synapsefabric.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
+		},
+		"steam-game-synapse-WorkspaceDefaultStorage_properties_typeProperties_url": {
+			"value": "https://dataprojectsforhuilu.dfs.core.windows.net"
+		}
+	}
+}

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Report",
+    "displayName": "steam_games_analysis_report"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "da0913aa-1512-a606-454a-b07d2586389d"
+  }
+}

@@ -1,0 +1,52 @@
+{
+	"name": "run_job",
+	"properties": {
+		"activities": [
+			{
+				"name": "run_job",
+				"type": "SynapseNotebook",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebook": {
+						"referenceName": "05_run_job",
+						"type": "NotebookReference"
+					},
+					"parameters": {
+						"Once": {
+							"value": "True",
+							"type": "bool"
+						},
+						"ProcessingTime ": {
+							"value": "5 seconds",
+							"type": "string"
+						}
+					},
+					"snapshot": true,
+					"sparkPool": {
+						"referenceName": "pipeline2",
+						"type": "BigDataPoolReference"
+					},
+					"executorSize": "Small",
+					"conf": {
+						"spark.dynamicAllocation.enabled": null,
+						"spark.dynamicAllocation.minExecutors": null,
+						"spark.dynamicAllocation.maxExecutors": null
+					},
+					"driverSize": "Small",
+					"numExecutors": null
+				}
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2025-12-28T12:51:44Z"
+	},
+	"type": "Microsoft.Synapse/workspaces/pipelines"
+}

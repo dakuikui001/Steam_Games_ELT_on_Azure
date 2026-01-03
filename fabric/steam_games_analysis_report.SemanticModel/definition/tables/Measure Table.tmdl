@@ -1,0 +1,51 @@
+table 'Measure Table'
+	lineageTag: 3c75dbe1-ca17-4394-bbc8-84c52e1005ad
+
+	measure 'Total Recommendations' = SUM(fact_steam_games_gl[recommendations])
+		formatString: 0
+		lineageTag: 5f42f27b-b5eb-4424-a7df-c7722557f48a
+
+	measure 'AVG Recommendations' = AVERAGE(fact_steam_games_gl[recommendations])
+		lineageTag: 3b525dab-c477-443b-95db-e92a560694e3
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'AVG Price' = AVERAGE(fact_steam_games_gl[price])
+		lineageTag: 217f2fd5-cdd9-4d58-b199-b82d3ee9f5e3
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure 'Total Games' = DISTINCTCOUNT(fact_steam_games_gl[appid])
+		formatString: 0
+		lineageTag: 5ecea934-250f-4d70-a014-91b403f187f7
+
+	measure 'Free Games' = CALCULATE(DISTINCTCOUNT(fact_steam_games_gl[appid]), fact_steam_games_gl[price] = 0)
+		formatString: 0
+		lineageTag: e4c43c95-f643-4669-9777-022402cf3969
+
+	measure 'Total Developers' = DISTINCTCOUNT(dim_developers_gl[developer])
+		formatString: 0
+		lineageTag: df3be616-e410-4e79-8a54-7aa76cdeacfb
+
+	measure DateExists = IF(ISBLANK(COUNT(fact_steam_games_gl[release_date])), 0, 1)
+		formatString: 0
+		lineageTag: c89c5018-5c87-4777-9367-59e8eb31a1be
+
+	measure Rank_Value = SUMX('metrics selection', [metrics selection])
+		formatString: 0
+		lineageTag: e21e2644-671f-4e88-994c-dec7335d55d9
+
+	column Value
+		lineageTag: 5d3a2ef5-1355-46b4-85d2-7bd161761a6e
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Value]
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'Measure Table' = calculated
+		mode: import
+		source = {""}
+
+	annotation PBI_Id = eea3a474f70c4c0c9d26ab293cc195b0
+

@@ -1,0 +1,139 @@
+{
+	"name": "02_bronze",
+	"properties": {
+		"nbformat": 4,
+		"nbformat_minor": 2,
+		"bigDataPool": {
+			"referenceName": "newpool",
+			"type": "BigDataPoolReference"
+		},
+		"sessionProperties": {
+			"driverMemory": "28g",
+			"driverCores": 4,
+			"executorMemory": "28g",
+			"executorCores": 4,
+			"numExecutors": 2,
+			"runAsWorkspaceSystemIdentity": false,
+			"conf": {
+				"spark.dynamicAllocation.enabled": "false",
+				"spark.dynamicAllocation.minExecutors": "2",
+				"spark.dynamicAllocation.maxExecutors": "2",
+				"spark.autotune.trackingId": "d9d07dd7-ecc2-4f11-ad03-61235f240b27"
+			}
+		},
+		"metadata": {
+			"saveOutput": true,
+			"enableDebugMode": false,
+			"kernelspec": {
+				"name": "synapse_pyspark",
+				"display_name": "python"
+			},
+			"language_info": {
+				"name": "python"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/39078ff2-6324-4d09-88e5-575820da458d/resourceGroups/data_engineering/providers/Microsoft.Synapse/workspaces/steam-game-synapse/bigDataPools/newpool",
+				"name": "newpool",
+				"type": "Spark",
+				"endpoint": "https://steam-game-synapse.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/newpool",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net"
+				},
+				"sparkVersion": "3.5",
+				"nodeCount": 10,
+				"cores": 4,
+				"memory": 28,
+				"automaticScaleJobs": false
+			},
+			"sessionKeepAliveTimeout": 30
+		},
+		"cells": [
+			{
+				"cell_type": "code",
+				"metadata": {
+					"tags": [
+						"parameters"
+					]
+				},
+				"source": [
+					"Once = True\n",
+					"ProcessingTime = '5 seconds'"
+				],
+				"execution_count": 9
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"class Bronze():\n",
+					"    def __init__(self):\n",
+					"        self.initialized = True\n",
+					"        self.raw = \"abfss://steam-game-project@dataprojectsforhuilu.dfs.core.windows.net/raw\"\n",
+					"        self.bronze = \"abfss://steam-game-project@dataprojectsforhuilu.dfs.core.windows.net/medallion/bronze\"\n",
+					"  \n",
+					"    def consume_steam_game_bz(self, once=True, processing_time=\"5 seconds\"):\n",
+					"        from pyspark.sql import functions as F\n",
+					"        schema = '''\n",
+					"                appid integer,\n",
+					"                name string,\n",
+					"                release_year integer,\n",
+					"                release_date string,\n",
+					"                genres string,\n",
+					"                categories string,\n",
+					"                price double,\n",
+					"                recommendations integer,\n",
+					"                developer string,\n",
+					"                publisher string\n",
+					"        '''\n",
+					"        \n",
+					"        df_stream = (spark.readStream\n",
+					"                        .format(\"csv\")\n",
+					"                        .schema(schema)\n",
+					"                        .option(\"header\", \"true\")\n",
+					"                        .option(\"recursiveFileLookup\", \"true\") \n",
+					"                        .option(\"pathGlobFilter\", \"*.csv\")\n",
+					"                        .option(\"maxFilesPerTrigger\", 1) \n",
+					"                        .load(self.raw)\n",
+					"                        .withColumn(\"load_time\", F.current_timestamp())\n",
+					"                        .withColumn(\"source_file\", F.col(\"_metadata.file_path\"))\n",
+					"                    )\n",
+					"\n",
+					"        return self._write_stream_append(df_stream, \"steam_game_bz\", \"steam_game_bz_ingestion_stream\", \"bronze\", once, processing_time)\n",
+					"\n",
+					"\n",
+					"    def _write_stream_append(self, df, path, query_name, pool, once, processing_time):\n",
+					"        table_name = path \n",
+					"        stream_writer = (df.writeStream\n",
+					"           .foreachBatch(lambda micro_df, batch_id: validate_and_insert_process_batch(micro_df, \"\", \"\", batch_id, table_name))\n",
+					"           .outputMode(\"append\")\n",
+					"           .option(\"checkpointLocation\", f\"{self.bronze}/{path}/checkpoints\")\n",
+					"           .queryName(query_name)\n",
+					"        )\n",
+					"        spark.sparkContext.setLocalProperty(\"spark.scheduler.pool\", pool)\n",
+					"        \n",
+					"        if once:\n",
+					"            return stream_writer.trigger(availableNow=True).start()\n",
+					"        else:\n",
+					"            return stream_writer.trigger(processingTime=processing_time).start()\n",
+					"\n",
+					"\n",
+					"    def consume(self, once=True, processing_time=\"5 seconds\"):\n",
+					"        import time\n",
+					"        start = int(time.time())\n",
+					"        print(f\"\\nStarting bronze layer consumption ...\")\n",
+					"        \n",
+					"        self.consume_steam_game_bz(once, processing_time)\n",
+					"\n",
+					"        \n",
+					"        if once:\n",
+					"            for stream in spark.streams.active:\n",
+					"                stream.awaitTermination()\n",
+					"                \n",
+					"        print(f\"Completed bronze layer consumtion {int(time.time()) - start} seconds\")\n",
+					""
+				],
+				"execution_count": 16
+			}
+		]
+	}
+}

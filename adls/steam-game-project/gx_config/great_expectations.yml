@@ -1,0 +1,11 @@
+
+config_version: 3.0
+expectations_store_name: expectations_store
+stores:
+  expectations_store:
+    class_name: ExpectationsStore
+    store_backend:
+      class_name: TupleAzureBlobStoreBackend
+      container: steam-game-project
+      prefix: gx_config/expectations
+      account_name: dataprojectsforhuilu

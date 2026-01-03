@@ -1,0 +1,43 @@
+table dim_genres_gl
+	lineageTag: 9120a013-d0ff-44f0-aaf6-8a784901836c
+
+	column appid
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 97111c33-2855-4345-a29f-253a80c451ac
+		summarizeBy: none
+		sourceColumn: appid
+
+		annotation SummarizationSetBy = Automatic
+
+	column genre
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 318a8c5d-ce33-40bf-923f-416ce254627f
+		summarizeBy: none
+		sourceColumn: genre
+
+		annotation SummarizationSetBy = Automatic
+
+	column update_time
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: 092daf4e-95aa-48b8-b758-471f4ec93836
+		summarizeBy: none
+		sourceColumn: update_time
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_genres_gl = m
+		mode: directQuery
+		source =
+				let
+				    Source = Sql.Database("synapsefabric-ondemand.sql.azuresynapse.net", "steamdb"),
+				    dbo_dim_genres_gl = Source{[Schema="dbo",Item="dim_genres_gl"]}[Data]
+				in
+				    dbo_dim_genres_gl
+
+	annotation PBI_ResultType = Table
+

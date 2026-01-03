@@ -1,0 +1,28 @@
+model Model
+	culture: en-US
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: en-US
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation __PBI_TimeIntelligenceEnabled = 1
+
+annotation PBI_QueryOrder = ["dim_categories_gl","dim_developers_gl","dim_genres_gl","dim_publishers_gl","fact_steam_games_gl"]
+
+ref table dim_categories_gl
+ref table dim_developers_gl
+ref table dim_genres_gl
+ref table dim_publishers_gl
+ref table fact_steam_games_gl
+ref table Date_Table
+ref table DateTableTemplate_de42a6d8-3e44-4edc-b560-7e8e28fd7554
+ref table LocalDateTable_77b54161-2441-49a5-bee2-24c4a1274fed
+ref table LocalDateTable_ede357a5-4c7e-41e9-9ad2-771e38857cc5
+ref table LocalDateTable_f362b2fa-1ffc-4d5e-8e90-c674313dba51
+ref table LocalDateTable_3541513a-31ab-4975-b1d9-f9992583af7a
+ref table 'Measure Table'
+ref table 'metrics selection'
+
+ref cultureInfo en-US
+

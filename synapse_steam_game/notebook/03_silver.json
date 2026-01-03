@@ -1,0 +1,150 @@
+{
+	"name": "03_silver",
+	"properties": {
+		"nbformat": 4,
+		"nbformat_minor": 2,
+		"bigDataPool": {
+			"referenceName": "newpool",
+			"type": "BigDataPoolReference"
+		},
+		"sessionProperties": {
+			"driverMemory": "28g",
+			"driverCores": 4,
+			"executorMemory": "28g",
+			"executorCores": 4,
+			"numExecutors": 2,
+			"runAsWorkspaceSystemIdentity": false,
+			"conf": {
+				"spark.dynamicAllocation.enabled": "false",
+				"spark.dynamicAllocation.minExecutors": "2",
+				"spark.dynamicAllocation.maxExecutors": "2",
+				"spark.autotune.trackingId": "b946c4bd-6e35-4895-94bb-caf708cf3b43"
+			}
+		},
+		"metadata": {
+			"saveOutput": true,
+			"enableDebugMode": false,
+			"kernelspec": {
+				"name": "synapse_pyspark",
+				"display_name": "python"
+			},
+			"language_info": {
+				"name": "python"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/39078ff2-6324-4d09-88e5-575820da458d/resourceGroups/data_engineering/providers/Microsoft.Synapse/workspaces/steam-game-synapse/bigDataPools/newpool",
+				"name": "newpool",
+				"type": "Spark",
+				"endpoint": "https://steam-game-synapse.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/newpool",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net"
+				},
+				"sparkVersion": "3.5",
+				"nodeCount": 10,
+				"cores": 4,
+				"memory": 28,
+				"automaticScaleJobs": false
+			},
+			"sessionKeepAliveTimeout": 30
+		},
+		"cells": [
+			{
+				"cell_type": "code",
+				"metadata": {
+					"tags": [
+						"parameters"
+					]
+				},
+				"source": [
+					"Once = True\n",
+					"ProcessingTime = '5 seconds'"
+				],
+				"execution_count": 1
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"class Upserter:\n",
+					"    def __init__(self, merge_query, temp_view_name):\n",
+					"        self.merge_query = merge_query\n",
+					"        self.temp_view_name = temp_view_name\n",
+					"\n",
+					"    def upsert(self, df_micro_batch, batch_id):\n",
+					"        df_micro_batch.createOrReplaceTempView(self.temp_view_name)\n",
+					"        df_micro_batch._jdf.sparkSession().sql(self.merge_query)"
+				],
+				"execution_count": 2
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"%run \"00_common_functions\""
+				],
+				"execution_count": 3
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"class Silver():\n",
+					"    def __init__(self):\n",
+					"        self.initialized = True\n",
+					"        self.silver = \"abfss://steam-game-project@dataprojectsforhuilu.dfs.core.windows.net/medallion/silver\"\n",
+					" \n",
+					"    def upsert_steam_game_sl(self, once=True, processing_time=\"15 seconds\", startingVersion=0):\n",
+					"        from pyspark.sql import functions as F\n",
+					"        query = f\"\"\"\n",
+					"            MERGE INTO steam_game_sl a\n",
+					"            USING steam_game_sl_delta b\n",
+					"            ON a.appid = b.appid\n",
+					"            WHEN MATCHED THEN UPDATE SET *\n",
+					"            WHEN NOT MATCHED THEN INSERT *\n",
+					"        \"\"\"\n",
+					"        data_upserter = Upserter(query, \"steam_game_sl_delta\")\n",
+					"\n",
+					"        df_delta = (spark.readStream\n",
+					"            .option(\"startingVersion\", startingVersion)\n",
+					"            .option(\"ignoreDeletes\", True)\n",
+					"            .table(\"steam_game_bz\")\n",
+					"            .withWatermark(\"load_time\", \"30 seconds\")\n",
+					"            .withColumn(\"update_time\", F.current_timestamp())\n",
+					"        )\n",
+					"\n",
+					"        preprocessed_df = preprocessing(df_delta)\n",
+					"        \n",
+					"        return self._write_stream_update(preprocessed_df, data_upserter, \"steam_game_sl\", \"steam_game_sl_upsert_stream\", \"silver\", once, processing_time)\n",
+					"\n",
+					"    def _write_stream_update(self, df, upserter, path, query_name, pool, once, processing_time):\n",
+					"        stream_writer = (df.writeStream\n",
+					"            .foreachBatch(upserter.upsert)\n",
+					"            .outputMode(\"update\")\n",
+					"            .option(\"checkpointLocation\", f\"{self.silver}/{path}/checkpoints\")\n",
+					"            .queryName(query_name)\n",
+					"        )\n",
+					"        spark.sparkContext.setLocalProperty(\"spark.scheduler.pool\", pool)\n",
+					"        if once:\n",
+					"            return stream_writer.trigger(availableNow=True).start()\n",
+					"        else:\n",
+					"            return stream_writer.trigger(processingTime=processing_time).start()\n",
+					"    \n",
+					"    \n",
+					"    def _await_queries(self, once):\n",
+					"        if once:\n",
+					"            for stream in spark.streams.active:\n",
+					"                stream.awaitTermination()\n",
+					"    \n",
+					"    def upsert(self, once=True, processing_time=\"5 seconds\"):\n",
+					"        import time\n",
+					"        start = int(time.time())\n",
+					"        print(f\"\\nExecuting silver layer upsert ...\")\n",
+					"\n",
+					"        self.upsert_steam_game_sl(once, processing_time)\n",
+					"        self._await_queries(once)\n",
+					"        print(f\"Completed silver layer upsert {int(time.time()) - start} seconds\")\n",
+					""
+				],
+				"execution_count": 4
+			}
+		]
+	}
+}

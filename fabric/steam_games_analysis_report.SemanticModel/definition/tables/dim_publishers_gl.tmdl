@@ -1,0 +1,43 @@
+table dim_publishers_gl
+	lineageTag: 8efdc83d-4a94-498e-9856-47893588063e
+
+	column appid
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: c52c586f-eb31-4a78-8527-41dd11410a7d
+		summarizeBy: none
+		sourceColumn: appid
+
+		annotation SummarizationSetBy = Automatic
+
+	column publisher
+		dataType: string
+		sourceProviderType: varchar(8000)
+		lineageTag: 8572245c-ee6f-4e8e-b64f-715fa2ba5e23
+		summarizeBy: none
+		sourceColumn: publisher
+
+		annotation SummarizationSetBy = Automatic
+
+	column update_time
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: 892333f2-90ac-45c2-9c3c-a68458b8f5a2
+		summarizeBy: none
+		sourceColumn: update_time
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_publishers_gl = m
+		mode: directQuery
+		source =
+				let
+				    Source = Sql.Database("synapsefabric-ondemand.sql.azuresynapse.net", "steamdb"),
+				    dbo_dim_publishers_gl = Source{[Schema="dbo",Item="dim_publishers_gl"]}[Data]
+				in
+				    dbo_dim_publishers_gl
+
+	annotation PBI_ResultType = Table
+

@@ -1,0 +1,17 @@
+{
+	"name": "01_data_exploration",
+	"properties": {
+		"content": {
+			"query": "USE master;\nGO\n\nDROP DATABASE [steam_game_DB];\nGO\n\nCREATE DATABASE [steam_game_DB]\nCOLLATE Latin1_General_100_CI_AS_SC_UTF8;\n\nDECLARE @env NVARCHAR(10) = 'dev'; \nDECLARE @sql NVARCHAR(MAX);\n\nSET @sql = N'CREATE EXTERNAL DATA SOURCE raw_container WITH (LOCATION = ''abfss://steam-game-'+ @env +'@databrickhuilu01.dfs.core.windows.net/raw/'')';\n\nPRINT @sql; \n\nEXEC sp_executesql @sql;\n\n\nDECLARE @env NVARCHAR(10) = 'dev'; \nDECLARE @sql NVARCHAR(MAX);\n\nSET @sql = N'CREATE EXTERNAL DATA SOURCE refined_container WITH (LOCATION = ''abfss://steam-game-'+ @env +'@databrickhuilu01.dfs.core.windows.net/refined/'')';\n\nPRINT @sql; \n\nEXEC sp_executesql @sql;\n\n\n\nIF EXISTS (SELECT * FROM sys.external_file_formats WHERE name = 'SynapseParquetFormat')\n    DROP EXTERNAL FILE FORMAT SynapseParquetFormat;\nGO\n\nCREATE EXTERNAL FILE FORMAT SynapseParquetFormat\nWITH (  \n    FORMAT_TYPE = PARQUET,  \n    DATA_COMPRESSION = 'org.apache.hadoop.io.compress.SnappyCodec' \n);\n\nCREATE EXTERNAL TABLE steam_game_ext\nWITH(\n    LOCATION = 'steam_game_parquet',\n    DATA_SOURCE = refined_container,\n    FILE_FORMAT = SynapseParquetFormat\n) AS SELECT *\nFROM\n    OPENROWSET(\n        BULK '*.csv',\n        DATA_SOURCE = 'raw_container',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS [data]\n\nselect top 100 release_date from fact_steam_games_gl order by release_date desc\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "steamdb",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

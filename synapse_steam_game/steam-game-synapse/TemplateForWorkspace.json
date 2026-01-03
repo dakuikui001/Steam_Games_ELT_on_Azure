@@ -1,0 +1,2118 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"workspaceName": {
+			"type": "string",
+			"metadata": "Workspace name",
+			"defaultValue": "steam-game-synapse"
+		},
+		"steam-game-synapse-WorkspaceDefaultSqlServer_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'steam-game-synapse-WorkspaceDefaultSqlServer'",
+			"defaultValue": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:steam-game-synapse.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
+		},
+		"synapsefabric-WorkspaceDefaultSqlServer_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'synapsefabric-WorkspaceDefaultSqlServer'",
+			"defaultValue": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:synapsefabric.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
+		},
+		"steam-game-synapse-WorkspaceDefaultStorage_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://dataprojectsforhuilu.dfs.core.windows.net"
+		}
+	},
+	"variables": {
+		"workspaceId": "[concat('Microsoft.Synapse/workspaces/', parameters('workspaceName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('workspaceName'), '/run_job')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "run_job",
+						"type": "SynapseNotebook",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"notebook": {
+								"referenceName": "05_run_job",
+								"type": "NotebookReference"
+							},
+							"parameters": {
+								"Once": {
+									"value": "True",
+									"type": "bool"
+								},
+								"ProcessingTime ": {
+									"value": "5 seconds",
+									"type": "string"
+								}
+							},
+							"snapshot": true,
+							"sparkPool": {
+								"referenceName": "pipeline2",
+								"type": "BigDataPoolReference"
+							},
+							"executorSize": "Small",
+							"conf": {
+								"spark.dynamicAllocation.enabled": null,
+								"spark.dynamicAllocation.minExecutors": null,
+								"spark.dynamicAllocation.maxExecutors": null
+							},
+							"driverSize": "Small",
+							"numExecutors": null
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2025-12-28T12:51:44Z"
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/notebooks/05_run_job')]",
+				"[concat(variables('workspaceId'), '/bigDataPools/pipeline2')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/steam-game-synapse-WorkspaceDefaultSqlServer')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"parameters": {
+					"DBName": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('steam-game-synapse-WorkspaceDefaultSqlServer_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/steam-game-synapse-WorkspaceDefaultStorage')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('steam-game-synapse-WorkspaceDefaultStorage_properties_typeProperties_url')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/synapsefabric-WorkspaceDefaultSqlServer')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"parameters": {
+					"DBName": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('synapsefabric-WorkspaceDefaultSqlServer_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AutoResolveIntegrationRuntime')]",
+			"type": "Microsoft.Synapse/workspaces/integrationRuntimes",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "AutoResolve",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 0
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/WorkspaceSystemIdentity')]",
+			"type": "Microsoft.Synapse/workspaces/credentials",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "ManagedIdentity",
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/01_data_exploration')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "USE master;\nGO\n\nDROP DATABASE [steam_game_DB];\nGO\n\nCREATE DATABASE [steam_game_DB]\nCOLLATE Latin1_General_100_CI_AS_SC_UTF8;\n\nDECLARE @env NVARCHAR(10) = 'dev'; \nDECLARE @sql NVARCHAR(MAX);\n\nSET @sql = N'CREATE EXTERNAL DATA SOURCE raw_container WITH (LOCATION = ''abfss://steam-game-'+ @env +'@databrickhuilu01.dfs.core.windows.net/raw/'')';\n\nPRINT @sql; \n\nEXEC sp_executesql @sql;\n\n\nDECLARE @env NVARCHAR(10) = 'dev'; \nDECLARE @sql NVARCHAR(MAX);\n\nSET @sql = N'CREATE EXTERNAL DATA SOURCE refined_container WITH (LOCATION = ''abfss://steam-game-'+ @env +'@databrickhuilu01.dfs.core.windows.net/refined/'')';\n\nPRINT @sql; \n\nEXEC sp_executesql @sql;\n\n\n\nIF EXISTS (SELECT * FROM sys.external_file_formats WHERE name = 'SynapseParquetFormat')\n    DROP EXTERNAL FILE FORMAT SynapseParquetFormat;\nGO\n\nCREATE EXTERNAL FILE FORMAT SynapseParquetFormat\nWITH (  \n    FORMAT_TYPE = PARQUET,  \n    DATA_COMPRESSION = 'org.apache.hadoop.io.compress.SnappyCodec' \n);\n\nCREATE EXTERNAL TABLE steam_game_ext\nWITH(\n    LOCATION = 'steam_game_parquet',\n    DATA_SOURCE = refined_container,\n    FILE_FORMAT = SynapseParquetFormat\n) AS SELECT *\nFROM\n    OPENROWSET(\n        BULK '*.csv',\n        DATA_SOURCE = 'raw_container',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS [data]\n\nselect top 100 release_date from fact_steam_games_gl order by release_date desc\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "steamdb",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/00_common_functions')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "newpool",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"runAsWorkspaceSystemIdentity": false,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "d4f4d46b-3e60-4656-a398-ecd2ea734ddb"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "python"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/39078ff2-6324-4d09-88e5-575820da458d/resourceGroups/data_engineering/providers/Microsoft.Synapse/workspaces/steam-game-synapse/bigDataPools/newpool",
+						"name": "newpool",
+						"type": "Spark",
+						"endpoint": "https://steam-game-synapse.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/newpool",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "3.5",
+						"nodeCount": 10,
+						"cores": 4,
+						"memory": 28
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"source": [
+							"import pandas as pd\n",
+							"from pyspark.sql.functions import pandas_udf, col\n",
+							"from pyspark.sql.types import DateType\n",
+							"from datetime import datetime\n",
+							"from delta.tables import DeltaTable"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"def check_duplicates(df):    \n",
+							"    print('Checking for duplicates ',end='')\n",
+							"    cleaned_df = df.dropDuplicates()\n",
+							"    print('OK')\n",
+							"    return df\n",
+							"\n",
+							"def check_all_null(df):\n",
+							"    print('Checking for all-null rows ', end='')\n",
+							"    cleaned_df = df.dropna(how='all')\n",
+							"    print('OK')\n",
+							"    return cleaned_df\n",
+							"\n",
+							"def check_null(df, columns):\n",
+							"    print('Checking for nulls on string columns ',end = '')\n",
+							"    processed_df1 = df.fillna('Unknown', subset = columns)\n",
+							"    print('OK')\n",
+							"    print('Checking for nulls on numeric columns ',end = '')\n",
+							"    processed_df2  = processed_df1.fillna(0, subset = columns)\n",
+							"    print('OK')\n",
+							"    return processed_df2\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 2
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"def parse_steam_date(date_str):\n",
+							"    if date_str is None:\n",
+							"        return None\n",
+							"    \n",
+							"    date_str = str(date_str).strip()\n",
+							"\n",
+							"    if not date_str or date_str.lower() == 'none':\n",
+							"        return None\n",
+							"\n",
+							"    date_str = date_str.strip()\n",
+							"    if not date_str:\n",
+							"        return None\n",
+							"    \n",
+							"    # %b %d, %Y -> Jul 5, 2024\n",
+							"    # %b %d, %y -> Jul 5, 24\n",
+							"    for fmt in (\"%b %d, %Y\", \"%b %d, %y\"):\n",
+							"        try:\n",
+							"            return datetime.strptime(date_str, fmt)\n",
+							"        except ValueError:\n",
+							"            continue\n",
+							"\n",
+							"    # %B %Y -> December 2025\n",
+							"    # %b %Y -> Dec 2025\n",
+							"    for fmt in (\"%B %Y\", \"%b %Y\"):\n",
+							"        try:\n",
+							"            return datetime.strptime(date_str, fmt)\n",
+							"        except ValueError:\n",
+							"            continue\n",
+							"\n",
+							"    # \"Q4 2025\"\n",
+							"    if 'Q' in date_str and len(date_str) >= 7:\n",
+							"        try:\n",
+							"            quarter = date_str[1] \n",
+							"            year = date_str[-4:]  \n",
+							"            month = (int(quarter) - 1) * 3 + 1\n",
+							"            return datetime(int(year), month, 1)\n",
+							"        except:\n",
+							"            pass\n",
+							"\n",
+							"    # \"2025\"\n",
+							"    if date_str.isdigit() and len(date_str) == 4:\n",
+							"        return datetime(int(date_str), 1, 1)\n",
+							"\n",
+							"    return None\n",
+							"\n",
+							"@pandas_udf(DateType())\n",
+							"def parse_date_batch(s: pd.Series) -> pd.Series:\n",
+							"    return s.apply(lambda x: parse_steam_date(x))"
+						],
+						"outputs": [],
+						"execution_count": 10
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"def preprocessing(df):\n",
+							"    parsed_date_df = df.withColumn(\"release_date\", parse_date_batch(col(\"release_date\")))\n",
+							"    df1 = check_duplicates(parsed_date_df)\n",
+							"    df2 = check_all_null(df1)\n",
+							"    df3 = check_null(df2, df2.schema.names)\n",
+							"    return df3"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"from pyspark.sql import functions as F\n",
+							"\n",
+							"def exploding(df, col_name):\n",
+							"    if col_name == \"categories\":\n",
+							"        alias_name = \"category\"\n",
+							"    elif col_name == \"genres\":\n",
+							"        alias_name = \"genre\"\n",
+							"    else:\n",
+							"        alias_name = col_name\n",
+							"    \n",
+							"    exploded_df = df.select(\n",
+							"        \"appid\",\n",
+							"        F.explode(F.split(F.col(col_name), \";\")).alias(alias_name),\n",
+							"        \"update_time\" \n",
+							"    ).filter(F.col(alias_name) != \"\")\n",
+							"    \n",
+							"    return exploded_df"
+						],
+						"outputs": [],
+						"execution_count": null
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/01_setup')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "newpool",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"runAsWorkspaceSystemIdentity": false,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "33825211-dc3b-4945-98c4-855763449e7f"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/39078ff2-6324-4d09-88e5-575820da458d/resourceGroups/data_engineering/providers/Microsoft.Synapse/workspaces/steam-game-synapse/bigDataPools/newpool",
+						"name": "newpool",
+						"type": "Spark",
+						"endpoint": "https://steam-game-synapse.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/newpool",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "3.5",
+						"nodeCount": 10,
+						"cores": 4,
+						"memory": 28
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"source": [
+							"spark"
+						],
+						"outputs": [],
+						"execution_count": 2
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"spark.sql(\"CREATE DATABASE IF NOT EXISTS SteamDB\")\n",
+							"spark.sql(\"USE SteamDB\")"
+						],
+						"outputs": [],
+						"execution_count": 5
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"class SetupBronzeHelper():\n",
+							"    def __init__(self):\n",
+							"        self.initialized = True\n",
+							"        self.bronze = \"abfss://steam-game-project@dataprojectsforhuilu.dfs.core.windows.net/medallion/bronze\"\n",
+							"        self.silver = \"abfss://steam-game-project@dataprojectsforhuilu.dfs.core.windows.net/medallion/silver\"\n",
+							"        self.gold = \"abfss://steam-game-project@dataprojectsforhuilu.dfs.core.windows.net/medallion/gold\"\n",
+							"\n",
+							"\n",
+							"    def create_steam_game_bz(self):\n",
+							"        if(self.initialized):\n",
+							"            print(f\"Creating steam_game_bz table...\", end='')\n",
+							"            spark.sql(f'''CREATE TABLE IF NOT EXISTS steam_game_bz(\n",
+							"                appid integer,\n",
+							"                name string,\n",
+							"                release_year integer,\n",
+							"                release_date string,\n",
+							"                genres string,\n",
+							"                categories string,\n",
+							"                price double,\n",
+							"                recommendations integer,\n",
+							"                developer string,\n",
+							"                publisher string,\n",
+							"                load_time timestamp,\n",
+							"                source_file string\n",
+							"                )\n",
+							"                USING DELTA\n",
+							"                LOCATION '{self.bronze}/steam_game_bz/'\n",
+							"            ''')\n",
+							"            print(\"Done\")\n",
+							"        else:\n",
+							"            raise ReferenceError(\"Application database is not defined. Cannot create table in default database.\")\n",
+							"    \n",
+							"\n",
+							" \n",
+							"    def setup(self):\n",
+							"        import time\n",
+							"        start = int(time.time())\n",
+							"        print(f\"\\nStarting setup ...\")\n",
+							"        self.create_steam_game_bz()\n",
+							"        print(f\"Setup completed in {int(time.time()) - start} seconds\")\n",
+							"\n",
+							"    def validate(self):\n",
+							"        import time\n",
+							"        start = int(time.time())\n",
+							"        print(f\"\\nStarting setup validation ...\")\n",
+							"        self.assert_table(\"steam_game_bz\")\n",
+							"        print(f\"Setup validation completed in {int(time.time()) - start} seconds\")\n",
+							"\n",
+							"    def assert_table(self, table_name):\n",
+							"        assert spark.sql(f\"SHOW TABLES\") \\\n",
+							"            .filter(f\"isTemporary == false and tableName == '{table_name}'\") \\\n",
+							"            .count() == 1, f\"The table {table_name} is missing\"\n",
+							"        print(f\"Found {table_name} table: Success\")\n",
+							"\n",
+							"    def cleanup(self):\n",
+							"        tables = spark.catalog.listTables(\"SteamDB\")\n",
+							"        print(f\"Deleting Tables...\", end='')\n",
+							"        for table in tables:\n",
+							"            spark.sql(f\"DROP TABLE IF EXISTS SteamDB.{table.name}\")\n",
+							"        print(\"Done\")\n",
+							"\n",
+							"        print(f\"Deleting Bronze Folder...\", end='')\n",
+							"        mssparkutils.fs.rm(self.bronze + '/', True)\n",
+							"        print(\"Done\")\n",
+							"\n",
+							"        print(f\"Deleting Silver Folder...\", end='')\n",
+							"        mssparkutils.fs.rm(self.silver + '/', True)\n",
+							"        print(\"Done\")\n",
+							"       \n",
+							"        print(f\"Deleting Gold Folder...\", end='')\n",
+							"        mssparkutils.fs.rm(self.gold + '/', True)\n",
+							"        print(\"Done\")\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 7
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"setupBronzeHelper = SetupBronzeHelper()"
+						],
+						"outputs": [],
+						"execution_count": 8
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"setupBronzeHelper.cleanup()\n",
+							"setupBronzeHelper.setup()\n",
+							"setupBronzeHelper.validate()"
+						],
+						"outputs": [],
+						"execution_count": 9
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"class SetupSilverHelper():\n",
+							"    def __init__(self):\n",
+							"        self.initialized = True\n",
+							"        self.silver = \"abfss://steam-game-project@dataprojectsforhuilu.dfs.core.windows.net/medallion/silver\"\n",
+							" \n",
+							"    def create_steam_game_sl(self):\n",
+							"        if(self.initialized):\n",
+							"            print(f\"Creating steam_game_sl table...\", end='')\n",
+							"            spark.sql(f'''CREATE TABLE IF NOT EXISTS steam_game_sl(\n",
+							"                appid integer,\n",
+							"                name string,\n",
+							"                release_year integer,\n",
+							"                release_date date,\n",
+							"                genres string,\n",
+							"                categories string,\n",
+							"                price double,\n",
+							"                recommendations integer,\n",
+							"                developer string,\n",
+							"                publisher string,\n",
+							"                load_time timestamp,\n",
+							"                source_file string,\n",
+							"                update_time timestamp\n",
+							"                )\n",
+							"                USING DELTA\n",
+							"                LOCATION '{self.silver}/steam_game_sl/'\n",
+							"            ''')\n",
+							"            print(\"Done\")\n",
+							"        else:\n",
+							"            raise ReferenceError(\"Application database is not defined. Cannot create table in default database.\")\n",
+							"    \n",
+							"    def setup(self):\n",
+							"        import time\n",
+							"        start = int(time.time())\n",
+							"        print(f\"\\nStarting setup ...\")\n",
+							"        self.create_steam_game_sl()\n",
+							"        print(f\"Setup completed in {int(time.time()) - start} seconds\")\n",
+							"\n",
+							"    def validate(self):\n",
+							"        import time\n",
+							"        start = int(time.time())\n",
+							"        print(f\"\\nStarting setup validation ...\")\n",
+							"        self.assert_table(\"steam_game_sl\")\n",
+							"        print(f\"Setup validation completed in {int(time.time()) - start} seconds\")\n",
+							"\n",
+							"    def assert_table(self, table_name):\n",
+							"        assert spark.sql(f\"SHOW TABLES\") \\\n",
+							"            .filter(f\"isTemporary == false and tableName == '{table_name}'\") \\\n",
+							"            .count() == 1, f\"The table {table_name} is missing\"\n",
+							"        print(f\"Found {table_name} table: Success\")"
+						],
+						"outputs": [],
+						"execution_count": 12
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"setupSilverHelper = SetupSilverHelper()\n",
+							"setupSilverHelper.setup()\n",
+							"setupSilverHelper.validate()"
+						],
+						"outputs": [],
+						"execution_count": 13
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"class SetupGoldHelper():\n",
+							"    def __init__(self):\n",
+							"        self.initialized = True\n",
+							"        self.gold = \"abfss://steam-game-project@dataprojectsforhuilu.dfs.core.windows.net/medallion/gold\"\n",
+							"\n",
+							"    def create_fact_steam_games_gl(self):\n",
+							"        if(self.initialized):\n",
+							"            print(f\"Creating fact_steam_games_gl table...\", end='')\n",
+							"            spark.sql(f'''CREATE TABLE IF NOT EXISTS fact_steam_games_gl(\n",
+							"                appid integer,\n",
+							"                name string,\n",
+							"                release_year integer,\n",
+							"                release_date date,\n",
+							"                price double,\n",
+							"                recommendations integer,\n",
+							"                update_time timestamp\n",
+							"                )\n",
+							"                USING DELTA\n",
+							"                LOCATION '{self.gold}/fact_steam_games_gl/'\n",
+							"            ''')\n",
+							"            print(\"Done\")\n",
+							"        else:\n",
+							"            raise ReferenceError(\"Application database is not defined. Cannot create table in default database.\")\n",
+							"\n",
+							"    def create_dim_genres_gl(self):\n",
+							"        if(self.initialized):\n",
+							"            print(f\"Creating dim_genres_gl table...\", end='')\n",
+							"            spark.sql(f'''CREATE TABLE IF NOT EXISTS dim_genres_gl(\n",
+							"                appid integer,\n",
+							"                genre string,\n",
+							"                update_time timestamp\n",
+							"                )\n",
+							"                USING DELTA\n",
+							"                LOCATION '{self.gold}/dim_genres_gl/'\n",
+							"            ''')\n",
+							"            print(\"Done\")\n",
+							"        else:\n",
+							"            raise ReferenceError(\"Application database is not defined. Cannot create table in default database.\")\n",
+							"   \n",
+							"    def create_dim_categories_gl(self):\n",
+							"        if(self.initialized):\n",
+							"            print(f\"Creating dim_categories_gl table...\", end='')\n",
+							"            spark.sql(f'''CREATE TABLE IF NOT EXISTS dim_categories_gl(\n",
+							"                appid integer,\n",
+							"                category string,\n",
+							"                update_time timestamp\n",
+							"                )\n",
+							"                USING DELTA\n",
+							"                LOCATION '{self.gold}/dim_categories_gl/'\n",
+							"            ''')\n",
+							"            print(\"Done\")\n",
+							"        else:\n",
+							"            raise ReferenceError(\"Application database is not defined. Cannot create table in default database.\")\n",
+							"\n",
+							"    def create_dim_developers_gl(self):\n",
+							"        if(self.initialized):\n",
+							"            print(f\"Creating dim_developers_gl table...\", end='')\n",
+							"            spark.sql(f'''CREATE TABLE IF NOT EXISTS dim_developers_gl(\n",
+							"                appid integer,\n",
+							"                developer string,\n",
+							"                update_time timestamp\n",
+							"                )\n",
+							"                USING DELTA\n",
+							"                LOCATION '{self.gold}/dim_developers_gl/'\n",
+							"            ''')\n",
+							"            print(\"Done\")\n",
+							"        else:\n",
+							"            raise ReferenceError(\"Application database is not defined. Cannot create table in default database.\")\n",
+							"\n",
+							"    def create_dim_publishers_gl(self):\n",
+							"        if(self.initialized):\n",
+							"            print(f\"Creating dim_publishers_gl table...\", end='')\n",
+							"            spark.sql(f'''CREATE TABLE IF NOT EXISTS dim_publishers_gl(\n",
+							"                appid integer,\n",
+							"                publisher string,\n",
+							"                update_time timestamp\n",
+							"                )\n",
+							"                USING DELTA\n",
+							"                LOCATION '{self.gold}/dim_publishers_gl/'\n",
+							"            ''')\n",
+							"            print(\"Done\")\n",
+							"        else:\n",
+							"            raise ReferenceError(\"Application database is not defined. Cannot create table in default database.\")\n",
+							"\n",
+							"\n",
+							"    def setup(self):\n",
+							"        import time\n",
+							"        start = int(time.time())\n",
+							"        print(f\"\\nStarting setup ...\")\n",
+							"        self.create_fact_steam_games_gl()\n",
+							"        self.create_dim_genres_gl()\n",
+							"        self.create_dim_categories_gl()\n",
+							"        self.create_dim_developers_gl()\n",
+							"        self.create_dim_publishers_gl()\n",
+							"        print(f\"Setup completed in {int(time.time()) - start} seconds\")\n",
+							"\n",
+							"    def validate(self):\n",
+							"        import time\n",
+							"        start = int(time.time())\n",
+							"        print(f\"\\nStarting setup validation ...\")\n",
+							"        self.assert_table(\"fact_steam_games_gl\")\n",
+							"        self.assert_table(\"dim_genres_gl\")\n",
+							"        self.assert_table(\"dim_categories_gl\")\n",
+							"        self.assert_table(\"dim_developers_gl\")\n",
+							"        self.assert_table(\"dim_publishers_gl\")\n",
+							"        print(f\"Setup validation completed in {int(time.time()) - start} seconds\")\n",
+							"\n",
+							"    def assert_table(self, table_name):\n",
+							"        assert spark.sql(f\"SHOW TABLES\") \\\n",
+							"            .filter(f\"isTemporary == false and tableName == '{table_name}'\") \\\n",
+							"            .count() == 1, f\"The table {table_name} is missing\"\n",
+							"        print(f\"Found {table_name} table: Success\")"
+						],
+						"outputs": [],
+						"execution_count": 14
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"setupGoldHelper = SetupGoldHelper()\n",
+							"setupGoldHelper.setup()\n",
+							"setupGoldHelper.validate()"
+						],
+						"outputs": [],
+						"execution_count": 15
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"microsoft": {
+								"language": "sparksql"
+							},
+							"collapsed": false
+						},
+						"source": [
+							"%%sql\n",
+							"DROP TABLE IF EXISTS data_quality_quarantine;\n",
+							"\n",
+							"CREATE TABLE IF NOT EXISTS data_quality_quarantine (\n",
+							"    table_name STRING,\n",
+							"    batch_id LONG,\n",
+							"    violated_rules STRING,\n",
+							"    raw_data STRING,\n",
+							"    ingestion_time TIMESTAMP\n",
+							") USING DELTA\n",
+							"LOCATION 'abfss://steam-game-project@dataprojectsforhuilu.dfs.core.windows.net/gx_config/data_quality/';"
+						],
+						"outputs": [],
+						"execution_count": 16
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/02_bronze')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "newpool",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"runAsWorkspaceSystemIdentity": false,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "d9d07dd7-ecc2-4f11-ad03-61235f240b27"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "python"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/39078ff2-6324-4d09-88e5-575820da458d/resourceGroups/data_engineering/providers/Microsoft.Synapse/workspaces/steam-game-synapse/bigDataPools/newpool",
+						"name": "newpool",
+						"type": "Spark",
+						"endpoint": "https://steam-game-synapse.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/newpool",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "3.5",
+						"nodeCount": 10,
+						"cores": 4,
+						"memory": 28
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"metadata": {
+							"tags": [
+								"parameters"
+							]
+						},
+						"source": [
+							"Once = True\n",
+							"ProcessingTime = '5 seconds'"
+						],
+						"outputs": [],
+						"execution_count": 9
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"class Bronze():\n",
+							"    def __init__(self):\n",
+							"        self.initialized = True\n",
+							"        self.raw = \"abfss://steam-game-project@dataprojectsforhuilu.dfs.core.windows.net/raw\"\n",
+							"        self.bronze = \"abfss://steam-game-project@dataprojectsforhuilu.dfs.core.windows.net/medallion/bronze\"\n",
+							"  \n",
+							"    def consume_steam_game_bz(self, once=True, processing_time=\"5 seconds\"):\n",
+							"        from pyspark.sql import functions as F\n",
+							"        schema = '''\n",
+							"                appid integer,\n",
+							"                name string,\n",
+							"                release_year integer,\n",
+							"                release_date string,\n",
+							"                genres string,\n",
+							"                categories string,\n",
+							"                price double,\n",
+							"                recommendations integer,\n",
+							"                developer string,\n",
+							"                publisher string\n",
+							"        '''\n",
+							"        \n",
+							"        df_stream = (spark.readStream\n",
+							"                        .format(\"csv\")\n",
+							"                        .schema(schema)\n",
+							"                        .option(\"header\", \"true\")\n",
+							"                        .option(\"recursiveFileLookup\", \"true\") \n",
+							"                        .option(\"pathGlobFilter\", \"*.csv\")\n",
+							"                        .option(\"maxFilesPerTrigger\", 1) \n",
+							"                        .load(self.raw)\n",
+							"                        .withColumn(\"load_time\", F.current_timestamp())\n",
+							"                        .withColumn(\"source_file\", F.col(\"_metadata.file_path\"))\n",
+							"                    )\n",
+							"\n",
+							"        return self._write_stream_append(df_stream, \"steam_game_bz\", \"steam_game_bz_ingestion_stream\", \"bronze\", once, processing_time)\n",
+							"\n",
+							"\n",
+							"    def _write_stream_append(self, df, path, query_name, pool, once, processing_time):\n",
+							"        table_name = path \n",
+							"        stream_writer = (df.writeStream\n",
+							"           .foreachBatch(lambda micro_df, batch_id: validate_and_insert_process_batch(micro_df, \"\", \"\", batch_id, table_name))\n",
+							"           .outputMode(\"append\")\n",
+							"           .option(\"checkpointLocation\", f\"{self.bronze}/{path}/checkpoints\")\n",
+							"           .queryName(query_name)\n",
+							"        )\n",
+							"        spark.sparkContext.setLocalProperty(\"spark.scheduler.pool\", pool)\n",
+							"        \n",
+							"        if once:\n",
+							"            return stream_writer.trigger(availableNow=True).start()\n",
+							"        else:\n",
+							"            return stream_writer.trigger(processingTime=processing_time).start()\n",
+							"\n",
+							"\n",
+							"    def consume(self, once=True, processing_time=\"5 seconds\"):\n",
+							"        import time\n",
+							"        start = int(time.time())\n",
+							"        print(f\"\\nStarting bronze layer consumption ...\")\n",
+							"        \n",
+							"        self.consume_steam_game_bz(once, processing_time)\n",
+							"\n",
+							"        \n",
+							"        if once:\n",
+							"            for stream in spark.streams.active:\n",
+							"                stream.awaitTermination()\n",
+							"                \n",
+							"        print(f\"Completed bronze layer consumtion {int(time.time()) - start} seconds\")\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 16
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/03_silver')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "newpool",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"runAsWorkspaceSystemIdentity": false,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "b946c4bd-6e35-4895-94bb-caf708cf3b43"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "python"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/39078ff2-6324-4d09-88e5-575820da458d/resourceGroups/data_engineering/providers/Microsoft.Synapse/workspaces/steam-game-synapse/bigDataPools/newpool",
+						"name": "newpool",
+						"type": "Spark",
+						"endpoint": "https://steam-game-synapse.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/newpool",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "3.5",
+						"nodeCount": 10,
+						"cores": 4,
+						"memory": 28
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"metadata": {
+							"tags": [
+								"parameters"
+							]
+						},
+						"source": [
+							"Once = True\n",
+							"ProcessingTime = '5 seconds'"
+						],
+						"outputs": [],
+						"execution_count": 1
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"class Upserter:\n",
+							"    def __init__(self, merge_query, temp_view_name):\n",
+							"        self.merge_query = merge_query\n",
+							"        self.temp_view_name = temp_view_name\n",
+							"\n",
+							"    def upsert(self, df_micro_batch, batch_id):\n",
+							"        df_micro_batch.createOrReplaceTempView(self.temp_view_name)\n",
+							"        df_micro_batch._jdf.sparkSession().sql(self.merge_query)"
+						],
+						"outputs": [],
+						"execution_count": 2
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"%run \"00_common_functions\""
+						],
+						"outputs": [],
+						"execution_count": 3
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"class Silver():\n",
+							"    def __init__(self):\n",
+							"        self.initialized = True\n",
+							"        self.silver = \"abfss://steam-game-project@dataprojectsforhuilu.dfs.core.windows.net/medallion/silver\"\n",
+							" \n",
+							"    def upsert_steam_game_sl(self, once=True, processing_time=\"15 seconds\", startingVersion=0):\n",
+							"        from pyspark.sql import functions as F\n",
+							"        query = f\"\"\"\n",
+							"            MERGE INTO steam_game_sl a\n",
+							"            USING steam_game_sl_delta b\n",
+							"            ON a.appid = b.appid\n",
+							"            WHEN MATCHED THEN UPDATE SET *\n",
+							"            WHEN NOT MATCHED THEN INSERT *\n",
+							"        \"\"\"\n",
+							"        data_upserter = Upserter(query, \"steam_game_sl_delta\")\n",
+							"\n",
+							"        df_delta = (spark.readStream\n",
+							"            .option(\"startingVersion\", startingVersion)\n",
+							"            .option(\"ignoreDeletes\", True)\n",
+							"            .table(\"steam_game_bz\")\n",
+							"            .withWatermark(\"load_time\", \"30 seconds\")\n",
+							"            .withColumn(\"update_time\", F.current_timestamp())\n",
+							"        )\n",
+							"\n",
+							"        preprocessed_df = preprocessing(df_delta)\n",
+							"        \n",
+							"        return self._write_stream_update(preprocessed_df, data_upserter, \"steam_game_sl\", \"steam_game_sl_upsert_stream\", \"silver\", once, processing_time)\n",
+							"\n",
+							"    def _write_stream_update(self, df, upserter, path, query_name, pool, once, processing_time):\n",
+							"        stream_writer = (df.writeStream\n",
+							"            .foreachBatch(upserter.upsert)\n",
+							"            .outputMode(\"update\")\n",
+							"            .option(\"checkpointLocation\", f\"{self.silver}/{path}/checkpoints\")\n",
+							"            .queryName(query_name)\n",
+							"        )\n",
+							"        spark.sparkContext.setLocalProperty(\"spark.scheduler.pool\", pool)\n",
+							"        if once:\n",
+							"            return stream_writer.trigger(availableNow=True).start()\n",
+							"        else:\n",
+							"            return stream_writer.trigger(processingTime=processing_time).start()\n",
+							"    \n",
+							"    \n",
+							"    def _await_queries(self, once):\n",
+							"        if once:\n",
+							"            for stream in spark.streams.active:\n",
+							"                stream.awaitTermination()\n",
+							"    \n",
+							"    def upsert(self, once=True, processing_time=\"5 seconds\"):\n",
+							"        import time\n",
+							"        start = int(time.time())\n",
+							"        print(f\"\\nExecuting silver layer upsert ...\")\n",
+							"\n",
+							"        self.upsert_steam_game_sl(once, processing_time)\n",
+							"        self._await_queries(once)\n",
+							"        print(f\"Completed silver layer upsert {int(time.time()) - start} seconds\")\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 4
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/04_gold')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "newpool",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"runAsWorkspaceSystemIdentity": false,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "e350c202-57a9-4c3a-8cf2-fceb3227f6dd"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "python"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/39078ff2-6324-4d09-88e5-575820da458d/resourceGroups/data_engineering/providers/Microsoft.Synapse/workspaces/steam-game-synapse/bigDataPools/newpool",
+						"name": "newpool",
+						"type": "Spark",
+						"endpoint": "https://steam-game-synapse.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/newpool",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "3.5",
+						"nodeCount": 10,
+						"cores": 4,
+						"memory": 28
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"source": [
+							"Once = True\n",
+							"ProcessingTime = '5 seconds'"
+						],
+						"outputs": [],
+						"execution_count": 1
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"class Upserter:\n",
+							"    def __init__(self, merge_query, temp_view_name):\n",
+							"        self.merge_query = merge_query\n",
+							"        self.temp_view_name = temp_view_name\n",
+							"\n",
+							"    def upsert(self, df_micro_batch, batch_id):\n",
+							"        df_micro_batch.createOrReplaceTempView(self.temp_view_name)\n",
+							"        df_micro_batch._jdf.sparkSession().sql(self.merge_query)"
+						],
+						"outputs": [],
+						"execution_count": 2
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"%run \"00_common_functions\""
+						],
+						"outputs": [],
+						"execution_count": 3
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"class Gold():\n",
+							"    def __init__(self):\n",
+							"        self.initialized = True\n",
+							"        self.gold = \"abfss://steam-game-project@dataprojectsforhuilu.dfs.core.windows.net/medallion/gold\"\n",
+							" \n",
+							"    def upsert_fact_steam_games_gl(self, once=True, processing_time=\"15 seconds\", startingVersion=0):\n",
+							"        from pyspark.sql import functions as F\n",
+							"        query = f\"\"\"\n",
+							"            MERGE INTO fact_steam_games_gl a\n",
+							"            USING fact_steam_games_gl_delta b\n",
+							"            ON a.appid = b.appid\n",
+							"            WHEN MATCHED THEN UPDATE SET *\n",
+							"            WHEN NOT MATCHED THEN INSERT *\n",
+							"        \"\"\"\n",
+							"        data_upserter = Upserter(query, \"fact_steam_games_gl_delta\")\n",
+							"\n",
+							"        df_delta = (spark.readStream\n",
+							"            .option(\"startingVersion\", startingVersion)\n",
+							"            .option(\"ignoreDeletes\", True)\n",
+							"            .table(\"steam_game_sl\")\n",
+							"            .withWatermark(\"load_time\", \"30 seconds\")\n",
+							"            .withColumn(\"update_time\", F.current_timestamp())\n",
+							"            .select(\"appid\", \"name\", \"release_year\", \"release_date\", \"price\", \"recommendations\", \"update_time\")\n",
+							"        )\n",
+							"        \n",
+							"        return self._write_stream_update(df_delta, data_upserter, \"fact_steam_games_gl\", \"fact_steam_games_gl_upsert_stream\", \"gold_1\", once, processing_time)\n",
+							"\n",
+							"    def upsert_dim_genres_gl(self, once=True, processing_time=\"15 seconds\", startingVersion=0):\n",
+							"        from pyspark.sql import functions as F\n",
+							"        query = f\"\"\"\n",
+							"            MERGE INTO dim_genres_gl a\n",
+							"            USING dim_genres_gl_delta b\n",
+							"            ON a.appid = b.appid AND a.genre = b.genre\n",
+							"            WHEN MATCHED THEN UPDATE SET *\n",
+							"            WHEN NOT MATCHED THEN INSERT *\n",
+							"        \"\"\"\n",
+							"        data_upserter = Upserter(query, \"dim_genres_gl_delta\")\n",
+							"\n",
+							"        df_delta = (spark.readStream\n",
+							"            .option(\"startingVersion\", startingVersion)\n",
+							"            .option(\"ignoreDeletes\", True)\n",
+							"            .table(\"steam_game_sl\")\n",
+							"            .withWatermark(\"load_time\", \"30 seconds\")\n",
+							"            .withColumn(\"update_time\", F.current_timestamp())\n",
+							"            .select(\"appid\", \"genres\", \"update_time\")\n",
+							"        )\n",
+							"\n",
+							"        exploded_df = exploding(df_delta, \"genres\")\n",
+							"        \n",
+							"        return self._write_stream_update(exploded_df, data_upserter, \"dim_genres_gl\", \"dim_genres_gl_upsert_stream\", \"gold_2\", once, processing_time)\n",
+							"\n",
+							"    def upsert_dim_categories_gl(self, once=True, processing_time=\"15 seconds\", startingVersion=0):\n",
+							"        from pyspark.sql import functions as F\n",
+							"        query = f\"\"\"\n",
+							"            MERGE INTO dim_categories_gl a\n",
+							"            USING dim_categories_gl_delta b\n",
+							"            ON a.appid = b.appid AND a.category = b.category\n",
+							"            WHEN MATCHED THEN UPDATE SET *\n",
+							"            WHEN NOT MATCHED THEN INSERT *\n",
+							"        \"\"\"\n",
+							"        data_upserter = Upserter(query, \"dim_categories_gl_delta\")\n",
+							"\n",
+							"        df_delta = (spark.readStream\n",
+							"            .option(\"startingVersion\", startingVersion)\n",
+							"            .option(\"ignoreDeletes\", True)\n",
+							"            .table(\"steam_game_sl\")\n",
+							"            .withWatermark(\"load_time\", \"30 seconds\")\n",
+							"            .withColumn(\"update_time\", F.current_timestamp())\n",
+							"            .select(\"appid\", \"categories\", \"update_time\")\n",
+							"        )\n",
+							"\n",
+							"        exploded_df = exploding(df_delta, \"categories\")\n",
+							"        \n",
+							"        return self._write_stream_update(exploded_df, data_upserter, \"dim_categories_gl\", \"dim_categories_gl_upsert_stream\", \"gold_2\", once, processing_time)\n",
+							"\n",
+							"    def upsert_dim_developers_gl(self, once=True, processing_time=\"15 seconds\", startingVersion=0):\n",
+							"        from pyspark.sql import functions as F\n",
+							"        query = f\"\"\"\n",
+							"            MERGE INTO dim_developers_gl a\n",
+							"            USING dim_developers_gl_delta b\n",
+							"            ON a.appid = b.appid AND a.developer = b.developer\n",
+							"            WHEN MATCHED THEN UPDATE SET *\n",
+							"            WHEN NOT MATCHED THEN INSERT *\n",
+							"        \"\"\"\n",
+							"        data_upserter = Upserter(query, \"dim_developers_gl_delta\")\n",
+							"\n",
+							"        df_delta = (spark.readStream\n",
+							"            .option(\"startingVersion\", startingVersion)\n",
+							"            .option(\"ignoreDeletes\", True)\n",
+							"            .table(\"steam_game_sl\")\n",
+							"            .withWatermark(\"load_time\", \"30 seconds\")\n",
+							"            .withColumn(\"update_time\", F.current_timestamp())\n",
+							"            .select(\"appid\", \"developer\", \"update_time\")\n",
+							"        )\n",
+							"\n",
+							"        exploded_df = exploding(df_delta, \"developer\")\n",
+							"        \n",
+							"        return self._write_stream_update(exploded_df, data_upserter, \"dim_developers_gl\", \"dim_developers_gl_upsert_stream\", \"gold_2\", once, processing_time)\n",
+							"\n",
+							"    def upsert_dim_publishers_gl(self, once=True, processing_time=\"15 seconds\", startingVersion=0):\n",
+							"        from pyspark.sql import functions as F\n",
+							"        query = f\"\"\"\n",
+							"            MERGE INTO dim_publishers_gl a\n",
+							"            USING dim_publishers_gl_delta b\n",
+							"            ON a.appid = b.appid AND a.publisher = b.publisher\n",
+							"            WHEN MATCHED THEN UPDATE SET *\n",
+							"            WHEN NOT MATCHED THEN INSERT *\n",
+							"        \"\"\"\n",
+							"        data_upserter = Upserter(query, \"dim_publishers_gl_delta\")\n",
+							"\n",
+							"        df_delta = (spark.readStream\n",
+							"            .option(\"startingVersion\", startingVersion)\n",
+							"            .option(\"ignoreDeletes\", True)\n",
+							"            .table(\"steam_game_sl\")\n",
+							"            .withWatermark(\"load_time\", \"30 seconds\")\n",
+							"            .withColumn(\"update_time\", F.current_timestamp())\n",
+							"            .select(\"appid\", \"publisher\", \"update_time\")\n",
+							"        )\n",
+							"\n",
+							"        exploded_df = exploding(df_delta, \"publisher\")\n",
+							"        \n",
+							"        return self._write_stream_update(exploded_df, data_upserter, \"dim_publishers_gl\", \"dim_publishers_gl_upsert_stream\", \"gold_2\", once, processing_time)\n",
+							"\n",
+							"\n",
+							"    def _write_stream_update(self, df, upserter, path, query_name, pool, once, processing_time):\n",
+							"        stream_writer = (df.writeStream\n",
+							"            .foreachBatch(upserter.upsert)\n",
+							"            .outputMode(\"update\")\n",
+							"            .option(\"checkpointLocation\", f\"{self.gold}/{path}/checkpoints\")\n",
+							"            .queryName(query_name)\n",
+							"        )\n",
+							"        spark.sparkContext.setLocalProperty(\"spark.scheduler.pool\", pool)\n",
+							"        if once:\n",
+							"            return stream_writer.trigger(availableNow=True).start()\n",
+							"        else:\n",
+							"            return stream_writer.trigger(processingTime=processing_time).start()\n",
+							"    \n",
+							"    \n",
+							"    def _await_queries(self, once):\n",
+							"        if once:\n",
+							"            for stream in spark.streams.active:\n",
+							"                stream.awaitTermination()\n",
+							"    \n",
+							"    def upsert(self, once=True, processing_time=\"5 seconds\"):\n",
+							"        import time\n",
+							"        start = int(time.time())\n",
+							"        print(f\"\\nExecuting gold layer upsert ...\")\n",
+							"\n",
+							"        self.upsert_fact_steam_games_gl(once, processing_time)\n",
+							"        self._await_queries(once)\n",
+							"        print(f\"Completed gold layer 1 upsert {int(time.time()) - start} seconds\")\n",
+							"\n",
+							"        self.upsert_dim_genres_gl(once, processing_time)\n",
+							"        self.upsert_dim_categories_gl(once, processing_time)\n",
+							"        self.upsert_dim_developers_gl(once, processing_time)\n",
+							"        self.upsert_dim_publishers_gl(once, processing_time)\n",
+							"        self._await_queries(once)\n",
+							"        print(f\"Completed gold layer 2 upsert {int(time.time()) - start} seconds\")\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 4
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/05_run_job')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "newpool",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"runAsWorkspaceSystemIdentity": false,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "d6559c3f-2780-4deb-9c25-3dbdc08a0f27"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/39078ff2-6324-4d09-88e5-575820da458d/resourceGroups/data_engineering/providers/Microsoft.Synapse/workspaces/steam-game-synapse/bigDataPools/newpool",
+						"name": "newpool",
+						"type": "Spark",
+						"endpoint": "https://steam-game-synapse.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/newpool",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "3.5",
+						"nodeCount": 10,
+						"cores": 4,
+						"memory": 28,
+						"automaticScaleJobs": false
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"metadata": {},
+						"source": [
+							"# 1. 先安装关键的基础依赖\n",
+							"!pip install \"typing_extensions>=4.10.0\"\n",
+							"\n",
+							"# 2. 安装 Great Expectations 及其它依赖\n",
+							"!pip install \"great_expectations==1.10.0\"\n",
+							"\n",
+							"# 3. 修复你之前日志里提到的 sympy 冲突（torch 需要 1.13.1）\n",
+							"!pip install \"sympy==1.13.1\""
+						],
+						"outputs": [],
+						"execution_count": 1
+					},
+					{
+						"cell_type": "code",
+						"metadata": {},
+						"source": [
+							"%run \"great_expectations_processing\""
+						],
+						"outputs": [],
+						"execution_count": 2
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"tags": [
+								"parameters"
+							]
+						},
+						"source": [
+							"Once = True\n",
+							"ProcessingTime = '5 seconds'"
+						],
+						"outputs": [],
+						"execution_count": 3
+					},
+					{
+						"cell_type": "code",
+						"metadata": {},
+						"source": [
+							"spark.sql(\"USE steamdb\")"
+						],
+						"outputs": [],
+						"execution_count": 4
+					},
+					{
+						"cell_type": "code",
+						"metadata": {},
+						"source": [
+							"%run \"02_bronze\""
+						],
+						"outputs": [],
+						"execution_count": 5
+					},
+					{
+						"cell_type": "code",
+						"metadata": {},
+						"source": [
+							"bronze = Bronze()\n",
+							"bronze.consume(Once, ProcessingTime)"
+						],
+						"outputs": [],
+						"execution_count": 6
+					},
+					{
+						"cell_type": "code",
+						"metadata": {},
+						"source": [
+							"%run \"03_silver\""
+						],
+						"outputs": [],
+						"execution_count": 7
+					},
+					{
+						"cell_type": "code",
+						"metadata": {},
+						"source": [
+							"silver = Silver()\n",
+							"silver.upsert(Once, ProcessingTime)"
+						],
+						"outputs": [],
+						"execution_count": 8
+					},
+					{
+						"cell_type": "code",
+						"metadata": {},
+						"source": [
+							"%run \"04_gold\""
+						],
+						"outputs": [],
+						"execution_count": 9
+					},
+					{
+						"cell_type": "code",
+						"metadata": {},
+						"source": [
+							"gold = Gold()\n",
+							"gold.upsert(Once, ProcessingTime)"
+						],
+						"outputs": [],
+						"execution_count": 10
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/great_expectations_processing')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "newpool",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "c0848175-6816-40ac-8ac6-8eb00b22074e"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/39078ff2-6324-4d09-88e5-575820da458d/resourceGroups/data_engineering/providers/Microsoft.Synapse/workspaces/steam-game-synapse/bigDataPools/newpool",
+						"name": "newpool",
+						"type": "Spark",
+						"endpoint": "https://steam-game-synapse.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/newpool",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "3.5",
+						"nodeCount": 10,
+						"cores": 4,
+						"memory": 28
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"source": [
+							"import great_expectations as gx\n",
+							"from pyspark.sql import functions as F\n",
+							"from pyspark.sql import SparkSession\n",
+							"from pyspark.sql.types import StructType, StructField, StringType, LongType\n",
+							"import traceback\n",
+							"import os\n",
+							"import json\n",
+							"import threading\n",
+							"import gc\n",
+							"\n",
+							"# ==========================================\n",
+							"# 1. 基础配置\n",
+							"# ==========================================\n",
+							"PLATFORM = \"SYNAPSE\" \n",
+							"\n",
+							"BASE_PATH = \"abfss://steam-game-project@dataprojectsforhuilu.dfs.core.windows.net/gx_config/expectations/\"\n",
+							"QUARANTINE_TABLE = \"data_quality_quarantine\"\n",
+							"\n",
+							"\n",
+							"_SHARED_GX_CONTEXT = None\n",
+							"_CACHED_SUITES_JSON = {}\n",
+							"gx_lock = threading.RLock() \n",
+							"\n",
+							"# ==========================================\n",
+							"# 2. 配置预加载 (针对 Synapse 优化版)\n",
+							"# ==========================================\n",
+							"def preload_all_suites():\n",
+							"    global _CACHED_SUITES_JSON\n",
+							"    try:\n",
+							"        # 使用 ls 列出文件\n",
+							"        files = mssparkutils.fs.ls(BASE_PATH)\n",
+							"        \n",
+							"        for f in files:\n",
+							"            if f.name.endswith(\".json\"):\n",
+							"                suite_name = f.name.replace(\".json\", \"\")\n",
+							"                try:\n",
+							"                    # 使用 spark 读取文件内容并转为字符串\n",
+							"                    # .collect()[0][0] 获取第一行第一列的内容\n",
+							"                    content = spark.read.text(f.path).collect()\n",
+							"                    json_str = \"\".join([row[0] for row in content])\n",
+							"                    \n",
+							"                    suite_dict = json.loads(json_str)\n",
+							"                    suite_dict.pop(\"name\", None)\n",
+							"                    suite_dict.pop(\"data_context_id\", None)\n",
+							"                    \n",
+							"                    _CACHED_SUITES_JSON[suite_name] = suite_dict\n",
+							"                    print(f\"✅ Preloaded Suite: {suite_name}\")\n",
+							"                except Exception as e:\n",
+							"                    print(f\"❌ Load error {f.name}: {e}\")\n",
+							"    except Exception as e:\n",
+							"        print(f\"❌ Error accessing {BASE_PATH}: {e}\")\n",
+							"\n",
+							"# 执行预加载\n",
+							"preload_all_suites()\n",
+							"\n",
+							"def get_gx_context():\n",
+							"    global _SHARED_GX_CONTEXT\n",
+							"    with gx_lock:\n",
+							"        if _SHARED_GX_CONTEXT is None:\n",
+							"            _SHARED_GX_CONTEXT = gx.get_context(mode=\"ephemeral\")\n",
+							"        return _SHARED_GX_CONTEXT\n",
+							"\n",
+							"def load_suite_simple(context, suite_name):\n",
+							"    try:\n",
+							"        return context.suites.get(name=suite_name)\n",
+							"    except Exception:\n",
+							"        if suite_name in _CACHED_SUITES_JSON:\n",
+							"            suite_data = _CACHED_SUITES_JSON[suite_name]\n",
+							"            new_suite = gx.ExpectationSuite(\n",
+							"                name=suite_name, \n",
+							"                expectations=suite_data.get(\"expectations\", [])\n",
+							"            )\n",
+							"            return context.suites.add(new_suite)\n",
+							"        else:\n",
+							"            raise FileNotFoundError(f\"Suite {suite_name} not found in cache.\")\n",
+							"\n",
+							"# ==========================================\n",
+							"# 3. 核心处理函数\n",
+							"# ==========================================\n",
+							"def validate_and_insert_process_batch(df, catalog, schema, batch_id, table_name): \n",
+							"    spark_internal = df.sparkSession\n",
+							"    if df.limit(1).count() == 0: return\n",
+							"\n",
+							"    full_target_table = f\"{catalog}.{schema}.{table_name}\" if PLATFORM == \"DATABRICKS\" else table_name\n",
+							"    temp_id_col = \"_dq_batch_id\"\n",
+							"    ds_name = f\"ds_{table_name}_{batch_id}\"\n",
+							"    val_def_name = f\"val_{table_name}_{batch_id}\"\n",
+							"    \n",
+							"    # 持久化以确保 ID 稳定\n",
+							"    df_with_id = df.withColumn(temp_id_col, F.monotonically_increasing_id()).persist()\n",
+							"    result = None \n",
+							"\n",
+							"    # --- 锁内验证流 ---\n",
+							"    with gx_lock:\n",
+							"        try:\n",
+							"            print(f\"🔒 Batch {batch_id}: Processing {table_name}...\", flush=True)\n",
+							"            context = get_gx_context()\n",
+							"            \n",
+							"            # 清理旧定义\n",
+							"            for n in [val_def_name, ds_name]:\n",
+							"                try: \n",
+							"                    context.validation_definitions.delete(n) if \"val\" in n else context.data_sources.delete(n)\n",
+							"                except: pass\n",
+							"\n",
+							"            datasource = context.data_sources.add_spark(name=ds_name)\n",
+							"            asset = datasource.add_dataframe_asset(name=f\"asset_{batch_id}\")\n",
+							"            batch_def = asset.add_batch_definition_whole_dataframe(name=\"batch_def\")\n",
+							"            suite = load_suite_simple(context, f\"{table_name}_suite\")\n",
+							"            \n",
+							"            val_definition = context.validation_definitions.add(\n",
+							"                gx.ValidationDefinition(name=val_def_name, data=batch_def, suite=suite)\n",
+							"            )\n",
+							"\n",
+							"            print(f\"🚀 Batch {batch_id}: Running GX for {table_name}...\", flush=True)\n",
+							"            result = val_definition.run(\n",
+							"                batch_parameters={\"dataframe\": df_with_id},\n",
+							"                result_format={\"result_format\": \"COMPLETE\", \"unexpected_index_column_names\": [temp_id_col]}\n",
+							"            )\n",
+							"            \n",
+							"            if result.success:\n",
+							"                print(f\"✅ Batch {batch_id}: {table_name} Passed.\", flush=True)\n",
+							"            else:\n",
+							"                print(f\"⚠️ Batch {batch_id}: {table_name} FAILED.\", flush=True)\n",
+							"\n",
+							"            # 及时释放 Context 资源\n",
+							"            context.validation_definitions.delete(val_def_name)\n",
+							"            context.data_sources.delete(ds_name)\n",
+							"        except Exception as e:\n",
+							"            print(f\"❌ Batch {batch_id} GX Error on {table_name}: {str(e)}\", flush=True)\n",
+							"            df_with_id.drop(temp_id_col).write.mode(\"append\").saveAsTable(full_target_table)\n",
+							"            return \n",
+							"        finally:\n",
+							"            print(f\"🔓 Batch {batch_id}: {table_name} Released Lock.\", flush=True)\n",
+							"            gc.collect()\n",
+							"\n",
+							"    # --- 锁外入库逻辑  ---\n",
+							"    try:\n",
+							"        if result and result.success:\n",
+							"            df_with_id.drop(temp_id_col).write.mode(\"append\").format(\"delta\").option(\"mergeSchema\", \"true\").saveAsTable(full_target_table)\n",
+							"        \n",
+							"        elif result:\n",
+							"            errors = []\n",
+							"            for r in result.results:\n",
+							"                if not r.success:\n",
+							"                    # 提取行级错误 ID\n",
+							"                    conf = r.expectation_config\n",
+							"                    col = conf.kwargs.get(\"column\", \"Table\")\n",
+							"                    rule = conf.type\n",
+							"                    ids = r.result.get(\"unexpected_index_list\")\n",
+							"                    if ids:\n",
+							"                        for row_id_dict in ids:\n",
+							"                            val = row_id_dict.get(temp_id_col)\n",
+							"                            if val is not None:\n",
+							"                                errors.append((val, f\"[{col}] {rule}\"))\n",
+							"            \n",
+							"            # 如果验证失败但没有任何具体的坏行 ID -> 判定为表级结构错误，整批拦截\n",
+							"            if not errors: \n",
+							"                print(f\"🚨 Batch {batch_id}: {table_name} TABLE-LEVEL ERROR! Quarantining entire batch.\", flush=True)\n",
+							"                # 打印具体错在哪,帮助排查\n",
+							"                for r in result.results:\n",
+							"                    if not r.success:\n",
+							"                        print(f\"   Mismatch Details: {r.result.get('details')}\")\n",
+							"                \n",
+							"                # 隔离整批数据\n",
+							"                bad_df = df_with_id.withColumn(\"violated_rules\", F.lit(\"Table-level Schema/Count Error\")) \\\n",
+							"                    .withColumn(\"raw_data\", F.to_json(F.struct([c for c in df.columns]))) \\\n",
+							"                    .withColumn(\"origin_table\", F.lit(table_name)) \\\n",
+							"                    .withColumn(\"ingestion_time\", F.current_timestamp()) \\\n",
+							"                    .select(F.col(\"origin_table\").alias(\"table_name\"), F.lit(str(batch_id)).alias(\"gx_batch_id\"),\n",
+							"                            \"violated_rules\", \"raw_data\", \"ingestion_time\")\n",
+							"                bad_df.write.mode(\"append\").format(\"delta\").option(\"mergeSchema\", \"true\").saveAsTable(QUARANTINE_TABLE)\n",
+							"                return\n",
+							"\n",
+							"            # 行级隔离逻辑\n",
+							"            error_schema = StructType([StructField(temp_id_col, LongType(), True), StructField(\"violated_rule\", StringType(), True)])\n",
+							"            error_info_df = spark_internal.createDataFrame(errors, schema=error_schema) \\\n",
+							"                .groupBy(temp_id_col).agg(F.concat_ws(\"; \", F.collect_list(\"violated_rule\")).alias(\"violated_rules\"))\n",
+							"\n",
+							"            bad_row_ids = [e[0] for e in errors]\n",
+							"            bad_df = df_with_id.filter(F.col(temp_id_col).isin(bad_row_ids)).join(error_info_df, on=temp_id_col, how=\"left\") \\\n",
+							"                .withColumn(\"raw_data\", F.to_json(F.struct([c for c in df.columns]))) \\\n",
+							"                .withColumn(\"origin_table\", F.lit(table_name)).withColumn(\"ingestion_time\", F.current_timestamp()) \\\n",
+							"                .select(F.col(\"origin_table\").alias(\"table_name\"), F.lit(str(batch_id)).alias(\"gx_batch_id\"),\n",
+							"                        \"violated_rules\", \"raw_data\", \"ingestion_time\")\n",
+							"            bad_df.write.mode(\"append\").format(\"delta\").option(\"mergeSchema\", \"true\").saveAsTable(QUARANTINE_TABLE)\n",
+							"            \n",
+							"            # 将剩下的好行写入目标\n",
+							"            good_df = df_with_id.filter(~F.col(temp_id_col).isin(bad_row_ids)).drop(temp_id_col)\n",
+							"            if good_df.limit(1).count() > 0:\n",
+							"                good_df.write.mode(\"append\").format(\"delta\").option(\"mergeSchema\", \"true\").saveAsTable(full_target_table)\n",
+							"            print(f\"📦 Batch {batch_id}: {table_name} Quarantined {len(set(bad_row_ids))} rows.\", flush=True)\n",
+							"\n",
+							"    except Exception as e:\n",
+							"        print(f\"❌ Batch {batch_id} Write Error on {table_name}: {str(e)}\", flush=True)\n",
+							"        df_with_id.drop(temp_id_col).write.mode(\"append\").saveAsTable(full_target_table)\n",
+							"    finally:\n",
+							"        if df_with_id.is_cached: df_with_id.unpersist()\n",
+							"        gc.collect()"
+						],
+						"outputs": [],
+						"execution_count": null
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/great_expectations_setting')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "newpool",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "01094e4d-d73e-4148-b7e4-277f025e7c8d"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/39078ff2-6324-4d09-88e5-575820da458d/resourceGroups/data_engineering/providers/Microsoft.Synapse/workspaces/steam-game-synapse/bigDataPools/newpool",
+						"name": "newpool",
+						"type": "Spark",
+						"endpoint": "https://steam-game-synapse.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/newpool",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "3.5",
+						"nodeCount": 10,
+						"cores": 4,
+						"memory": 28
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"source": [
+							"%pip install great_expectations==1.10.0"
+						],
+						"outputs": [],
+						"execution_count": 2
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"from great_expectations.core import ExpectationSuite\n",
+							"from notebookutils import mssparkutils\n",
+							"import great_expectations.expectations as gxe\n",
+							"from great_expectations.data_context import FileDataContext\n",
+							"from great_expectations.data_context.types.base import DataContextConfig\n",
+							"import os\n",
+							"import shutil"
+						],
+						"outputs": [],
+						"execution_count": 19
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"# 1. 基础路径配置\n",
+							"container_name = \"steam-game-project\"\n",
+							"account_name = \"dataprojectsforhuilu\"\n",
+							"gx_root_dir = f\"abfss://{container_name}@{account_name}.dfs.core.windows.net/gx_config/\"\n",
+							"\n",
+							"# --- 新增：彻底清空旧环境 ---\n",
+							"print(f\"正在清理旧的 GX 配置目录: {gx_root_dir}\")\n",
+							"try:\n",
+							"    # 递归删除整个 gx_config 文件夹及其内容\n",
+							"    mssparkutils.fs.rm(gx_root_dir, True) \n",
+							"    print(\"✅ 旧目录已彻底删除\")\n",
+							"except Exception as e:\n",
+							"    print(f\"ℹ️ 目录不存在或无需清理: {e}\")\n",
+							"\n",
+							"# 重新创建基础目录结构，防止后续写入报错\n",
+							"mssparkutils.fs.mkdirs(gx_root_dir)\n",
+							"mssparkutils.fs.mkdirs(gx_root_dir + \"expectations\")\n",
+							"# -----------------------\n",
+							"\n",
+							"# 2. 强制重写 yml\n",
+							"full_config = f\"\"\"\n",
+							"config_version: 3.0\n",
+							"expectations_store_name: expectations_store\n",
+							"stores:\n",
+							"  expectations_store:\n",
+							"    class_name: ExpectationsStore\n",
+							"    store_backend:\n",
+							"      class_name: TupleAzureBlobStoreBackend\n",
+							"      container: {container_name}\n",
+							"      prefix: gx_config/expectations\n",
+							"      account_name: {account_name}\n",
+							"\"\"\"\n",
+							"\n",
+							"mssparkutils.fs.put(gx_root_dir + \"great_expectations.yml\", full_config, True)\n",
+							"print(\"✅ 物理 yml 配置文件已重置\")\n",
+							"\n",
+							"# 3. 重新初始化 Context\n",
+							"context = gx.get_context(context_root_dir=gx_root_dir)\n",
+							"print(f\"🚀 GX Context 已重新加载，当前为全新环境。\")"
+						],
+						"outputs": [],
+						"execution_count": 20
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"# 定义表和对应的 Suite 名\n",
+							"tables_to_validate = [\n",
+							"    {\"table\": \"steam_game_bz\", \"suite\": \"steam_game_bz_suite\"}  \n",
+							"]\n",
+							"\n",
+							"for item in tables_to_validate:\n",
+							"    table_name = item[\"table\"]\n",
+							"    suite_name = item[\"suite\"]\n",
+							"    \n",
+							"    # 1.10+ 获取或创建 Suite 的标准写法\n",
+							"    try:\n",
+							"        # 使用 .suites.get 获取\n",
+							"        suite = context.suites.get(name=suite_name)\n",
+							"        print(f\"✅ 已加载现有 Suite: {suite_name}\")\n",
+							"    except Exception:\n",
+							"        # 使用 .suites.add 和 gx.ExpectationSuite 创建\n",
+							"        # 这会自动在 Files/gx_config/expectations/ 下生成对应的 .json 文件\n",
+							"        suite = context.suites.add(gx.ExpectationSuite(name=suite_name))\n",
+							"        print(f\"✨ 已成功新建并持久化 Suite: {suite_name}\")\n",
+							"\n",
+							"print(\"\\n所有 Suite 初始化完成。\")"
+						],
+						"outputs": [],
+						"execution_count": 21
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"table_rules_mapping = {\n",
+							"    \"steam_game_bz\": [\n",
+							"        # 1. 必填项检查\n",
+							"        gxe.ExpectColumnValuesToNotBeNull(column=\"appid\"),\n",
+							"        gxe.ExpectColumnValuesToBeBetween(\n",
+							"            column=\"release_year\", \n",
+							"            min_value=2021, \n",
+							"            max_value=2025\n",
+							"        ),\n",
+							"        gxe.ExpectColumnValuesToMatchStrftimeFormat(\n",
+							"            column=\"release_date\",\n",
+							"            strftime_format=\"%b %d, %Y\"\n",
+							"        ),\n",
+							"        gxe.ExpectColumnValuesToMatchRegex(\n",
+							"        column=\"developer\",\n",
+							"        regex=r\"^[^;]+(;[^;]+)*$\",\n",
+							"        mostly=1.0 \n",
+							"        ),\n",
+							"        gxe.ExpectColumnValuesToMatchRegex(\n",
+							"        column=\"publisher\",\n",
+							"        regex=r\"^[^;]+(;[^;]+)*$\",\n",
+							"        mostly=1.0 \n",
+							"        )\n",
+							"    ]\n",
+							"}"
+						],
+						"outputs": [],
+						"execution_count": 25
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"def initialize_all_suites(context, rules_mapping):\n",
+							"    import json\n",
+							"    from copy import deepcopy # 导入拷贝工具\n",
+							"    \n",
+							"    for table_name, expectations in rules_mapping.items():\n",
+							"        suite_name = f\"{table_name}_suite\"\n",
+							"        \n",
+							"        # 1. 获取或创建 Suite\n",
+							"        try:\n",
+							"            suite = context.suites.get(name=suite_name)\n",
+							"            # 注意：在 GX 1.0 中，清空 expectations 列表可能不会清除后端关联\n",
+							"            # 建议直接重新赋值一个空列表\n",
+							"            suite.expectations = [] \n",
+							"            print(f\"🔄 正在重置内存中的 Suite: {suite_name}\")\n",
+							"        except Exception:\n",
+							"            suite = context.suites.add(gx.ExpectationSuite(name=suite_name))\n",
+							"            print(f\"✨ 正在创建新的 Suite: {suite_name}\")\n",
+							"\n",
+							"        # 2. 批量添加规则\n",
+							"        for exp in expectations:\n",
+							"            try:\n",
+							"                # --- 关键修复代码 ---\n",
+							"                # 方案 A: 强行抹掉 ID (最直接)\n",
+							"                exp.id = None \n",
+							"                \n",
+							"                # 方案 B: 如果 A 不行，使用 deepcopy 彻底断开引用\n",
+							"                # clean_exp = deepcopy(exp)\n",
+							"                # clean_exp.id = None\n",
+							"                # suite.add_expectation(clean_exp)\n",
+							"                \n",
+							"                suite.add_expectation(exp)\n",
+							"            except Exception as e:\n",
+							"                # 如果是因为重复添加导致的错误，打印出来但继续运行\n",
+							"                print(f\"⚠️ 跳过重复规则或错误: {str(e)}\")\n",
+							"        \n",
+							"        # 3. 物理强制写入 (保持不变...)\n",
+							"        try:\n",
+							"            suite_dict = suite.to_json_dict()\n",
+							"            physical_path = f\"{gx_root_dir}expectations/{suite_name}.json\"\n",
+							"            mssparkutils.fs.put(physical_path, json.dumps(suite_dict, indent=2), True)\n",
+							"            print(f\"✅ 物理同步成功: {suite_name}.json\")\n",
+							"        except Exception as e:\n",
+							"            print(f\"❌ 物理写入失败 {suite_name}: {e}\")"
+						],
+						"outputs": [],
+						"execution_count": 30
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"initialize_all_suites(context, table_rules_mapping)"
+						],
+						"outputs": [],
+						"execution_count": 31
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"try:\n",
+							"    files = mssparkutils.fs.ls(gx_root_dir + \"expectations\")\n",
+							"    print(f\"🚀 物理扫描结果: 发现 {len(files)} 个文件\")\n",
+							"    for f in files:\n",
+							"        print(f\"文件路径: {f.path}\")\n",
+							"except:\n",
+							"    print(\"❌ 文件夹依然为空或未生成。\")"
+						],
+						"outputs": [],
+						"execution_count": 32
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"microsoft": {
+								"language": "sparksql"
+							},
+							"collapsed": false
+						},
+						"source": [
+							"%%sql\n",
+							"DROP TABLE IF EXISTS data_quality_quarantine;\n",
+							"\n",
+							"CREATE TABLE IF NOT EXISTS data_quality_quarantine (\n",
+							"    table_name STRING,\n",
+							"    batch_id LONG,\n",
+							"    violated_rules STRING,\n",
+							"    raw_data STRING,\n",
+							"    ingestion_time TIMESTAMP\n",
+							") USING DELTA\n",
+							"LOCATION 'abfss://steam-game-project@dataprojectsforhuilu.dfs.core.windows.net/gx_config/data_quality/';"
+						],
+						"outputs": [],
+						"execution_count": 33
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/newpool')]",
+			"type": "Microsoft.Synapse/workspaces/bigDataPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"autoPause": {
+					"enabled": true,
+					"delayInMinutes": 15
+				},
+				"autoScale": {
+					"enabled": true,
+					"maxNodeCount": 10,
+					"minNodeCount": 3
+				},
+				"nodeCount": 10,
+				"nodeSize": "Small",
+				"nodeSizeFamily": "MemoryOptimized",
+				"sparkVersion": "3.5",
+				"isComputeIsolationEnabled": false,
+				"sessionLevelPackagesEnabled": false,
+				"annotations": []
+			},
+			"dependsOn": [],
+			"location": "southeastasia"
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/pipelinerunjob')]",
+			"type": "Microsoft.Synapse/workspaces/bigDataPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"autoPause": {
+					"enabled": true,
+					"delayInMinutes": 15
+				},
+				"autoScale": {
+					"enabled": false,
+					"maxNodeCount": 10,
+					"minNodeCount": 3
+				},
+				"nodeCount": 3,
+				"nodeSize": "Small",
+				"nodeSizeFamily": "MemoryOptimized",
+				"sparkVersion": "3.5",
+				"libraryRequirements": {
+					"content": "great_expectations==1.10.0",
+					"filename": "requirements.txt",
+					"time": "2026-01-03T09:25:46.7677347Z"
+				},
+				"isComputeIsolationEnabled": false,
+				"sessionLevelPackagesEnabled": true,
+				"annotations": []
+			},
+			"dependsOn": [],
+			"location": "southeastasia"
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/pipeline2')]",
+			"type": "Microsoft.Synapse/workspaces/bigDataPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"autoPause": {
+					"enabled": true,
+					"delayInMinutes": 15
+				},
+				"autoScale": {
+					"enabled": false,
+					"maxNodeCount": 10,
+					"minNodeCount": 3
+				},
+				"nodeCount": 3,
+				"nodeSize": "Small",
+				"nodeSizeFamily": "MemoryOptimized",
+				"sparkVersion": "3.5",
+				"isComputeIsolationEnabled": false,
+				"sessionLevelPackagesEnabled": true,
+				"annotations": []
+			},
+			"dependsOn": [],
+			"location": "southeastasia"
+		}
+	]
+}
